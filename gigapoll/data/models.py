@@ -35,12 +35,33 @@ class User(Base):
 class Template(Base):
     __tablename__ = 'templates'
 
+    name: Mapped[str] = mapped_column(
+            String,
+            primary_key=True,
+        )
+    content: Mapped[str] = mapped_column(String)
+    user_id: Mapped[int] = mapped_column(
+            ForeignKey('users.id'),
+            primary_key=True,
+        )
+
+    user: Mapped['User'] = relationship(back_populates='templates')
+
+    # from sqlalchemy import UniqueConstraint
+    # __table_args__ = (
+    #     UniqueConstraint('name', 'room_id'),
+    # )
+
+
+class Poll(Base):
+    __tablename__ = 'polls'
+
     id: Mapped[int] = mapped_column(
             Integer,
             autoincrement=True,
             primary_key=True,
         )
-    content: Mapped[str] = mapped_column(String)
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
-
-    user: Mapped['User'] = relationship(back_populates='templates')
+    chat_id: Mapped[int] = mapped_column(Integer)
+    message_thread_id: Mapped[int] = mapped_column(Integer, nullable=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    config: Mapped[str] = mapped_column(String)
