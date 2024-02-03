@@ -30,3 +30,4 @@ repos:
     hooks:
     -   id: black
         files: 'migrations/versions/.*'
+        args: [--skip-string-normalization]
