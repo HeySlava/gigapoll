@@ -7,7 +7,6 @@ repos:
     -   id: check-yaml
     -   id: debug-statements
     -   id: double-quote-string-fixer
-        exlude: 'migrations/versions/.*'
     -   id: name-tests-test
     -   id: requirements-txt-fixer
 -   repo: https://github.com/asottile/setup-cfg-fmt
@@ -26,9 +25,3 @@ repos:
     rev: v1.8.0
     hooks:
     -   id: mypy
--   repo: https://github.com/psf/black
-    rev: 24.1.1
-    hooks:
-    -   id: black
-        files: 'migrations/versions/.*'
-        args: [--skip-string-normalization]
