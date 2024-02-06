@@ -56,9 +56,8 @@ class Template(Base):
 class Poll(Base):
     __tablename__ = 'polls'
 
-    id: Mapped[int] = mapped_column(
+    message_id: Mapped[int] = mapped_column(
             Integer,
-            autoincrement=True,
             primary_key=True,
         )
     chat_id: Mapped[int] = mapped_column(Integer)
