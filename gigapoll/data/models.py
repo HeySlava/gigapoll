@@ -66,20 +66,19 @@ class Poll(Base):
     config: Mapped[str] = mapped_column(String)
 
 
-# class Choice(Base):
-#     __tablename__ = 'choices'
+class Choice(Base):
+    __tablename__ = 'choices'
 
-#     id: Mapped[int] = mapped_column(
-#             Integer,
-#             primary_key=True,
-#             autoincrement=True,
-#             default=0,
-#         )
-#     message_id: Mapped[int] = mapped_column(Integer)
-#     chat_id: Mapped[int] = mapped_column(Integer)
-#     message_thread_id: Mapped[int] = mapped_column(Integer, nullable=True)
-#     user_id: Mapped[int] = mapped_column(Integer)
-#     first_name: Mapped[str] = mapped_column(String)
-#     last_name: Mapped[str] = mapped_column(String, nullable=True)
-#     username: Mapped[str] = mapped_column(String, nullable=True)
-#     choice: Mapped[str] = mapped_column(String)
+    id: Mapped[int] = mapped_column(
+            Integer,
+            primary_key=True,
+            autoincrement=True,
+        )
+    message_id: Mapped[int] = mapped_column(Integer)
+    chat_id: Mapped[int] = mapped_column(Integer)
+    message_thread_id: Mapped[int] = mapped_column(Integer, nullable=True)
+    user_id: Mapped[int] = mapped_column(Integer)
+    first_name: Mapped[str] = mapped_column(String)
+    last_name: Mapped[str] = mapped_column(String, nullable=True)
+    username: Mapped[str] = mapped_column(String, nullable=True)
+    choice: Mapped[str] = mapped_column(String)
