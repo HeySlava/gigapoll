@@ -69,10 +69,12 @@ class Poll(Base):
 class Choice(Base):
     __tablename__ = 'choices'
 
-    message_id: Mapped[int] = mapped_column(
+    id: Mapped[int] = mapped_column(
             Integer,
             primary_key=True,
+            autoincrement=True,
         )
+    message_id: Mapped[int] = mapped_column(Integer)
     chat_id: Mapped[int] = mapped_column(Integer)
     message_thread_id: Mapped[int] = mapped_column(Integer, nullable=True)
     user_id: Mapped[int] = mapped_column(Integer)
