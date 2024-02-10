@@ -1,5 +1,6 @@
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
+from sqlalchemy import JSON
 from sqlalchemy import MetaData
 from sqlalchemy import String
 from sqlalchemy.orm import DeclarativeBase
@@ -39,11 +40,14 @@ class Template(Base):
             String,
             primary_key=True,
         )
-    content: Mapped[str] = mapped_column(String)
     user_id: Mapped[int] = mapped_column(
             ForeignKey('users.id'),
             primary_key=True,
         )
+    version: Mapped[int] = mapped_column(Integer)
+    mode: Mapped[str] = mapped_column(String)
+    description: Mapped[str] = mapped_column(String)
+    choices: Mapped[list[str]] = mapped_column(JSON)
 
     user: Mapped['User'] = relationship(back_populates='templates')
 
