@@ -68,7 +68,6 @@ class Poll(Base):
     message_thread_id: Mapped[int] = mapped_column(Integer, nullable=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
     template_name: Mapped[str] = mapped_column(String)
-    config: Mapped[str] = mapped_column(String)
 
 
 class Choice(Base):
