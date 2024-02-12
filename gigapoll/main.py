@@ -39,6 +39,16 @@ async def start_command(message: types.Message) -> None:
     if message.from_user:
         await message.answer(f'Hello, {hbold(message.from_user.full_name)}!')
 
+async def set_my_commands(bot: Bot) -> None: 
+    from aiogram.types.bot_command import BotCommand
+    commands = [
+            BotCommand(command='help', description='bot information'),
+            BotCommand(
+                command='newtemplate',
+                description='create a new poll template',
+            ),
+        ]
+    await bot.set_my_commands(commands=commands)
 
 @dp.message(Command('new'))
 async def new_template(
@@ -158,6 +168,7 @@ async def echo_handler(message: types.Message) -> None:
 
 async def _main() -> None:
     bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
+    await set_my_commands(bot)
     await dp.start_polling(bot)
 
 
