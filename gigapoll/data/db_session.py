@@ -1,4 +1,5 @@
 import os
+from typing import Generator
 
 import sqlalchemy as sa
 from sqlalchemy import orm
@@ -32,7 +33,7 @@ def global_init(
     return engine
 
 
-def create_session() -> orm.Session:
+def create_session() -> Generator[orm.Session, None, None]:
     global _factory
 
     if not _factory:
