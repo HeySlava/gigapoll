@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
 from sqlalchemy import JSON
@@ -47,14 +49,15 @@ class Template(Base):
     version: Mapped[int] = mapped_column(Integer)
     mode: Mapped[str] = mapped_column(String)
     description: Mapped[str] = mapped_column(String)
-    choices: Mapped[list[str]] = mapped_column(JSON)
 
     user: Mapped['User'] = relationship(back_populates='templates')
 
-    # from sqlalchemy import UniqueConstraint
-    # __table_args__ = (
-    #     UniqueConstraint('name', 'room_id'),
-    # )
+    available_choices = relationship(
+            'TemplateChoice',
+            back_populates='template',
+            cascade='all, delete',
+            passive_deletes=True,
+        )
 
 
 class Poll(Base):
@@ -86,3 +89,16 @@ class Choice(Base):
     last_name: Mapped[str] = mapped_column(String, nullable=True)
     username: Mapped[str] = mapped_column(String, nullable=True)
     choice: Mapped[str] = mapped_column(String)
+
+
+class TemplateChoice(Base):
+    __tablename__ = 'template_choices'
+
+    template_name: Mapped[int] = mapped_column(
+            ForeignKey('templates.name'),
+            primary_key=True,
+        )
+    name: Mapped[str] = mapped_column(String, primary_key=True)
+    extra: Mapped[Any] = mapped_column(JSON, nullable=True)
+
+    template = relationship('Template', back_populates='available_choices')
