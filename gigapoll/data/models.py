@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import Boolean
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
@@ -92,6 +94,11 @@ class Choice(Base):
 class TemplateChoice(Base):
     __tablename__ = 'template_choices'
 
+    uuid: Mapped[str] = mapped_column(
+            String,
+            default=lambda: str(uuid.uuid4()).replace('-', ''),
+            primary_key=True
+        )
     template_name: Mapped[int] = mapped_column(
             ForeignKey('templates.name'),
             primary_key=True,
