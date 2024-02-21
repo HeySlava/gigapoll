@@ -1,8 +1,6 @@
-from typing import Any
-
+from sqlalchemy import Boolean
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
-from sqlalchemy import JSON
 from sqlalchemy import MetaData
 from sqlalchemy import String
 from sqlalchemy.orm import DeclarativeBase
@@ -99,6 +97,7 @@ class TemplateChoice(Base):
             primary_key=True,
         )
     name: Mapped[str] = mapped_column(String, primary_key=True)
-    extra: Mapped[Any] = mapped_column(JSON, nullable=True)
+    is_positive: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    is_negative: Mapped[bool] = mapped_column(Boolean, nullable=True)
 
     template = relationship('Template', back_populates='available_choices')
