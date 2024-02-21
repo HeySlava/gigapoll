@@ -38,6 +38,10 @@ class User(Base):
 class Template(Base):
     __tablename__ = 'templates'
 
+    uuid: Mapped[str] = mapped_column(
+            String,
+            default=lambda: str(uuid.uuid4()).replace('-', ''),
+        )
     name: Mapped[str] = mapped_column(
             String,
             primary_key=True,
@@ -97,10 +101,9 @@ class TemplateChoice(Base):
     uuid: Mapped[str] = mapped_column(
             String,
             default=lambda: str(uuid.uuid4()).replace('-', ''),
-            primary_key=True
         )
-    template_name: Mapped[int] = mapped_column(
-            ForeignKey('templates.name'),
+    template_uuid: Mapped[str] = mapped_column(
+            ForeignKey('templates.uuid'),
             primary_key=True,
         )
     name: Mapped[str] = mapped_column(String, primary_key=True)
