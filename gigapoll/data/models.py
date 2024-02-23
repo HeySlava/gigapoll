@@ -92,7 +92,10 @@ class Choice(Base):
     first_name: Mapped[str] = mapped_column(String)
     last_name: Mapped[str] = mapped_column(String, nullable=True)
     username: Mapped[str] = mapped_column(String, nullable=True)
-    cbdata: Mapped[str] = mapped_column(String)
+    cbdata: Mapped[str] = mapped_column(
+            String,
+            ForeignKey('buttons.id'),
+        )
     cdate: Mapped[dt.datetime] = mapped_column(
             DateTime,
             default=dt.datetime.now,
