@@ -1,6 +1,7 @@
-import uuid
+import datetime as dt
 
 from sqlalchemy import Boolean
+from sqlalchemy import DateTime
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
@@ -38,26 +39,20 @@ class User(Base):
 class Template(Base):
     __tablename__ = 'templates'
 
-    uuid: Mapped[str] = mapped_column(
-            String,
-            default=lambda: str(uuid.uuid4()).replace('-', ''),
-        )
-    name: Mapped[str] = mapped_column(
-            String,
+    id: Mapped[int] = mapped_column(
+            Integer,
+            autoincrement=True,
             primary_key=True,
         )
-    user_id: Mapped[int] = mapped_column(
-            ForeignKey('users.id'),
-            primary_key=True,
-        )
-    version: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    version: Mapped[int] = mapped_column(Integer, default=1)
     mode: Mapped[str] = mapped_column(String)
     description: Mapped[str] = mapped_column(String)
 
     user: Mapped['User'] = relationship(back_populates='templates')
-
     available_choices = relationship(
-            'TemplateChoice',
+            'Button',
             back_populates='template',
             cascade='all, delete',
             passive_deletes=True,
@@ -67,9 +62,14 @@ class Template(Base):
 class Poll(Base):
     __tablename__ = 'polls'
 
+    id: Mapped[int] = mapped_column(
+            Integer,
+            autoincrement=True,
+            primary_key=True,
+        )
     message_id: Mapped[int] = mapped_column(
             Integer,
-            primary_key=True,
+            index=True,
         )
     chat_id: Mapped[int] = mapped_column(Integer)
     message_thread_id: Mapped[int] = mapped_column(Integer, nullable=True)
@@ -92,21 +92,25 @@ class Choice(Base):
     first_name: Mapped[str] = mapped_column(String)
     last_name: Mapped[str] = mapped_column(String, nullable=True)
     username: Mapped[str] = mapped_column(String, nullable=True)
-    choice: Mapped[str] = mapped_column(String)
-
-
-class TemplateChoice(Base):
-    __tablename__ = 'template_choices'
-
-    uuid: Mapped[str] = mapped_column(
-            String,
-            default=lambda: str(uuid.uuid4()).replace('-', ''),
+    cbdata: Mapped[str] = mapped_column(String)
+    cdate: Mapped[dt.datetime] = mapped_column(
+            DateTime,
+            default=dt.datetime.now,
         )
-    template_uuid: Mapped[str] = mapped_column(
-            ForeignKey('templates.uuid'),
+
+
+class Button(Base):
+    __tablename__ = 'buttons'
+
+    id: Mapped[int] = mapped_column(
+            Integer,
             primary_key=True,
+            autoincrement=True,
         )
-    name: Mapped[str] = mapped_column(String, primary_key=True)
+    template_id: Mapped[str] = mapped_column(
+            ForeignKey('templates.id'),
+        )
+    value: Mapped[str] = mapped_column(String)
     is_positive: Mapped[bool] = mapped_column(Boolean, nullable=True)
     is_negative: Mapped[bool] = mapped_column(Boolean, nullable=True)
 
