@@ -15,3 +15,10 @@ def add_choices(
     session.commit()
     session.add_all(template_choices)
     session.commit()
+
+
+def get_button(
+        id: int,
+        session: Session,
+) -> Button:
+    return session.query(Button).where(Button.id == id).one()
