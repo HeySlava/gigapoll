@@ -1,5 +1,7 @@
+from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import select
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from gigapoll.data.models import Button
@@ -23,39 +25,10 @@ def get_poll_choices_models(
         ).all()
 
 
-def get_poll_choices(
-        user_id: int,
-        message_id: int,
-        chat_id: int,
-        message_thread_id: int | None,
-        session: Session,
-) -> dict[str, int]:
-
-    subq = (
-            select(
-                Choice.choice,
-                func.count(Choice.choice).label('cnt'),
-            )
-            .where(
-                Choice.user_id == user_id,
-                Choice.message_id == message_id,
-                Choice.message_thread_id == message_thread_id,
-                Choice.chat_id == chat_id,
-            )
-            .group_by(Choice.choice)
-            .subquery()
-        )
-
-    return {
-            getattr(r, 'choice'): getattr(r, 'cnt') for
-            r in
-            session.execute(select(subq))
-        }
-
-
 def get_poll_choices_per_option(
         message_id: int,
         chat_id: int,
+        template_id: int,
         session: Session,
 ) -> list[CntPerValue]:
 
@@ -77,6 +50,7 @@ def get_poll_choices_per_option(
                 subq,
                 Button.id == subq.c.cbdata
             ).group_by(Button.value, Button.id)
+            .where(Button.template_id == template_id)
             .subquery()
         )
 
@@ -96,10 +70,10 @@ def get_all_poll_choices(
         chat_id: int,
         session: Session,
 ) -> list[UserChoiceDTO]:
-    from sqlalchemy import text
     sql = text(f'''
         select
-        last_value(c.first_name) over w first_name
+        user_id
+        , last_value(c.first_name) over w first_name
         , last_value(c.last_name) over w last_name
         , last_value(c.username) over w username
         , b.value as value
@@ -114,13 +88,6 @@ def get_all_poll_choices(
     )
     order by c.cdate''')
 
-    sql = sql.columns(
-            Choice.first_name,
-            Choice.last_name,
-            Choice.username,
-            Button.value,
-        )
-
     return [UserChoiceDTO(*tuple(r)) for r in session.execute(sql)]
 
 
@@ -128,7 +95,6 @@ def add_choice(
         user_id: int,
         message_id: int,
         chat_id: int,
-        # message_thread_id: int | None,
         cbdata: str,
         first_name: str,
         last_name: str | None,
@@ -138,7 +104,6 @@ def add_choice(
     c = Choice(
             user_id=user_id,
             message_id=message_id,
-            # message_thread_id=message_thread_id,
             chat_id=chat_id,
             cbdata=cbdata,
             first_name=first_name,
@@ -148,3 +113,58 @@ def add_choice(
     session.add(c)
     session.commit()
     return c
+
+
+def add_positive_choice(
+        user_id: int,
+        message_id: int,
+        chat_id: int,
+        cbdata: str,
+        first_name: str,
+        last_name: str | None,
+        username: str | None,
+        session: Session,
+) -> Choice:
+    stmt = (
+            select(Choice)
+            .where(
+                Choice.user_id == user_id,
+                Choice.chat_id == chat_id,
+                Choice.message_id == message_id,
+            )
+            .join(Button, Choice.cbdata == Button.id)
+            .where(Button.is_negative)
+        )
+    negative = session.scalars(stmt).all()
+    if negative:
+        delete_stmt = delete(Choice).where(
+                Choice.id.in_([c.id for c in negative])
+            )
+        session.execute(delete_stmt)
+    c = Choice(
+            user_id=user_id,
+            message_id=message_id,
+            chat_id=chat_id,
+            cbdata=cbdata,
+            first_name=first_name,
+            last_name=last_name,
+            username=username,
+        )
+    session.add(c)
+    session.commit()
+    return c
+
+
+def delete_all_user_choices_from_poll(
+        user_id: int,
+        message_id: int,
+        chat_id: int,
+        session: Session,
+) -> None:
+    stmt = delete(Choice).where(
+            Choice.chat_id == chat_id,
+            Choice.user_id == user_id,
+            Choice.message_id == message_id,
+        )
+    session.execute(stmt)
+    session.commit()
