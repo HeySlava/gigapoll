@@ -72,7 +72,6 @@ class Poll(Base):
             index=True,
         )
     chat_id: Mapped[int] = mapped_column(Integer)
-    message_thread_id: Mapped[int] = mapped_column(Integer, nullable=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
     template_name: Mapped[str] = mapped_column(String)
 
@@ -87,7 +86,6 @@ class Choice(Base):
         )
     message_id: Mapped[int] = mapped_column(Integer)
     chat_id: Mapped[int] = mapped_column(Integer)
-    message_thread_id: Mapped[int] = mapped_column(Integer, nullable=True)
     user_id: Mapped[int] = mapped_column(Integer)
     first_name: Mapped[str] = mapped_column(String)
     last_name: Mapped[str] = mapped_column(String, nullable=True)
