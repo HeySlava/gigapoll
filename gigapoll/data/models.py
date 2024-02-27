@@ -67,11 +67,6 @@ class Poll(Base):
             autoincrement=True,
             primary_key=True,
         )
-    message_id: Mapped[int] = mapped_column(
-            Integer,
-            index=True,
-        )
-    chat_id: Mapped[int] = mapped_column(Integer)
     owner_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
     template_name: Mapped[str] = mapped_column(String)
 
@@ -84,15 +79,17 @@ class Choice(Base):
             primary_key=True,
             autoincrement=True,
         )
-    message_id: Mapped[int] = mapped_column(Integer)
-    chat_id: Mapped[int] = mapped_column(Integer)
     user_id: Mapped[int] = mapped_column(Integer)
     first_name: Mapped[str] = mapped_column(String)
     last_name: Mapped[str] = mapped_column(String, nullable=True)
     username: Mapped[str] = mapped_column(String, nullable=True)
-    cbdata: Mapped[str] = mapped_column(
-            String,
+    button_id: Mapped[int] = mapped_column(
+            Integer,
             ForeignKey('buttons.id'),
+        )
+    poll_id: Mapped[int] = mapped_column(
+            Integer,
+            ForeignKey('polls.id'),
         )
     cdate: Mapped[dt.datetime] = mapped_column(
             DateTime,
