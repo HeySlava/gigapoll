@@ -53,7 +53,7 @@ def get_template(
         ).one()
 
 
-def get_new_template(
+def get_buttons_for_empty_poll(
         user_id: int,
         template_name: str,
         session: Session,
@@ -61,7 +61,6 @@ def get_new_template(
     query_result = (
             session.query(
                 Template.name,
-                Template.description,
                 Button.value,
                 Button.id,
             )
@@ -75,11 +74,9 @@ def get_new_template(
 
     result = []
     for row in query_result:
-        name, description, choice_name, id = row
+        _, choice_name, id = row
         result.append(
                 ButtonDTO(
-                    name=name,
-                    description=description,
                     button_name=choice_name,
                     button_cbdata=str(id),
                     votes=0,

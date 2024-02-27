@@ -12,13 +12,13 @@ def get_different_modes_kb() -> InlineKeyboardMarkup:
 
 
 def get_poll_kb(
-        template_settings: list[ButtonDTO],
+        poll_buttons: list[ButtonDTO],
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    for s in template_settings:
+    for b in poll_buttons:
         kb.button(
-                text=s.public_name,
-                callback_data=s.button_cbdata,
+                text=b.public_name,
+                callback_data=b.button_cbdata,
             )
     kb.adjust(1)
     return kb.as_markup()

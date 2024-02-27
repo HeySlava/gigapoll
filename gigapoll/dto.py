@@ -2,8 +2,6 @@ from typing import NamedTuple
 
 
 class ButtonDTO(NamedTuple):
-    description: str
-    name: str
     button_name: str
     button_cbdata: str
     votes: int
@@ -13,18 +11,11 @@ class ButtonDTO(NamedTuple):
         return f'{self.button_name} ({self.votes} votes)'
 
 
-class CntPerValue(NamedTuple):
-    button_name: str
-    button_cbdata: str
-    cnt: int
-
-
-class UserChoiceDTO(NamedTuple):
+class UserDTO(NamedTuple):
     user_id: int
     first_name: str
     last_name: str | None
     username: str | None
-    choice: str
 
     @property
     def full_name(self) -> str:
@@ -39,6 +30,6 @@ class UserChoiceDTO(NamedTuple):
         return f'<a href="tg://user?id={self.user_id}">{self.full_name}</a>'
 
 
-class AggUsersByButton(NamedTuple):
-    button_value: str
-    users: list[UserChoiceDTO]
+class UserWithChoiceDTO(NamedTuple):
+    user: UserDTO
+    choice: str

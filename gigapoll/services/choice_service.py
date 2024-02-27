@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 
 from gigapoll.data.models import Button
 from gigapoll.data.models import Choice
-from gigapoll.dto import CntPerValue
-from gigapoll.dto import UserChoiceDTO
+from gigapoll.dto import ButtonDTO
+from gigapoll.dto import UserDTO
+from gigapoll.dto import UserWithChoiceDTO
 
 
 def get_poll_choices_models(
@@ -30,7 +31,7 @@ def get_poll_choices_per_option(
         chat_id: int,
         template_id: int,
         session: Session,
-) -> list[CntPerValue]:
+) -> list[ButtonDTO]:
 
     subq = (
             select(Choice.id, Choice.cbdata)
@@ -55,10 +56,10 @@ def get_poll_choices_per_option(
         )
 
     return [
-            CntPerValue(
+            ButtonDTO(
                 button_name=getattr(r, 'value'),
-                button_cbdata=getattr(r, 'id'),
-                cnt=getattr(r, 'cnt')
+                button_cbdata=str(getattr(r, 'id')),
+                votes=getattr(r, 'cnt')
             )
             for r
             in session.execute(select(group_subq))
@@ -69,7 +70,7 @@ def get_all_poll_choices(
         message_id: int,
         chat_id: int,
         session: Session,
-) -> list[UserChoiceDTO]:
+) -> list[UserWithChoiceDTO]:
     sql = text(f'''
         select
         user_id
@@ -88,7 +89,18 @@ def get_all_poll_choices(
     )
     order by c.cdate''')
 
-    return [UserChoiceDTO(*tuple(r)) for r in session.execute(sql)]
+    result = []
+    for r in session.execute(sql):
+        user_id, first_name, last_name, username, value = tuple(r)
+        user = UserDTO(
+                user_id=user_id,
+                first_name=first_name,
+                last_name=last_name,
+                username=username,
+            )
+        user_with_choice = UserWithChoiceDTO(user=user, choice=str(value))
+        result.append(user_with_choice)
+    return result
 
 
 def add_choice(

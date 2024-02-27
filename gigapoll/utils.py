@@ -1,11 +1,12 @@
 from aiogram import Bot
+from aiogram.types.bot_command import BotCommand
 from aiogram.utils.markdown import hbold
 
-from gigapoll.dto import AggUsersByButton
+from gigapoll.dto import UserDTO
+from gigapoll.dto import UserWithChoiceDTO
 
 
 async def set_my_commands(bot: Bot) -> None:
-    from aiogram.types.bot_command import BotCommand
     commands = [
             BotCommand(command='start', description='bot information'),
             BotCommand(
@@ -22,14 +23,20 @@ async def set_my_commands(bot: Bot) -> None:
 
 def generate_poll_text(
         description: str,
-        buttons: list[AggUsersByButton] = [],
+        choices: list[UserWithChoiceDTO] = [],
 ) -> str:
+    d: dict[str, dict[UserDTO, int]] = {}
+    for b in choices:
+        if b.choice not in d:
+            d[b.choice] = {}
+        if b.user not in d[b.choice]:
+            d[b.choice][b.user] = 0
+        d[b.choice][b.user] += 1
+
     text = description
     text = f'{text}\n\n'
-    for choice, users in buttons:
+    for choice, user_count_dict in d.items():
         text += f'{hbold(choice)}\n'
-        formatted_users = [f'- {u}' for u in users]
-        alligned_users = '\n'.join(formatted_users)
-        text += alligned_users
-        text = f'{text}\n\n'
+        for user, count in user_count_dict.items():
+            text += f'  {user.inline_user_html} ({count} votes)\n'
     return text.strip()
