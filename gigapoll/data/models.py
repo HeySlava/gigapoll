@@ -67,8 +67,7 @@ class Poll(Base):
             autoincrement=True,
             primary_key=True,
         )
-    owner_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
-    template_name: Mapped[str] = mapped_column(String)
+    template_id: Mapped[int] = mapped_column(ForeignKey('templates.id'))
 
 
 class Choice(Base):
