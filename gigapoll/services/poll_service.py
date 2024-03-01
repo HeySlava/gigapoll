@@ -4,19 +4,11 @@ from gigapoll.data.models import Poll
 
 
 def resigter_poll(
-        owner_id: int,
-        message_id: int,
-        chat_id: int,
-        message_thread_id: int | None,
-        template_name: str,
+        template_id: int,
         session: Session,
 ) -> Poll:
     poll = Poll(
-            chat_id=chat_id,
-            owner_id=owner_id,
-            message_id=message_id,
-            message_thread_id=message_thread_id,
-            template_name=template_name,
+            template_id=template_id,
         )
     session.add(poll)
     session.commit()

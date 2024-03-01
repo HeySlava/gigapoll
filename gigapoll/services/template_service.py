@@ -3,10 +3,10 @@ from sqlalchemy import delete
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from gigapoll.button import CallbackButton
 from gigapoll.data.models import Button
 from gigapoll.data.models import Poll
 from gigapoll.data.models import Template
-from gigapoll.dto import ButtonDTO
 
 
 def create_template(
@@ -42,7 +42,7 @@ def create_template(
     return template
 
 
-def get_template(
+def get_template_by_name(
         user_id: int,
         template_name: str,
         session: Session,
@@ -54,10 +54,9 @@ def get_template(
 
 
 def get_buttons_for_empty_poll(
-        user_id: int,
-        template_name: str,
+        template_id: int,
         session: Session,
-) -> list[ButtonDTO]:
+) -> list[CallbackButton]:
     query_result = (
             session.query(
                 Template.name,
@@ -65,8 +64,7 @@ def get_buttons_for_empty_poll(
                 Button.id,
             )
             .where(
-                Template.user_id == user_id,
-                Template.name == template_name,
+                Template.id == template_id,
             )
             .join(Button, Template.id == Button.template_id)
             .all()
@@ -76,13 +74,32 @@ def get_buttons_for_empty_poll(
     for row in query_result:
         _, choice_name, id = row
         result.append(
-                ButtonDTO(
+                CallbackButton(
                     button_name=choice_name,
-                    button_cbdata=str(id),
+                    button_id=id,
                     votes=0,
                 )
             )
     return result
+
+
+def get_template_by_poll_id(
+        poll_id: int,
+        session: Session,
+) -> Template:
+    stmt = (
+            select(Template)
+            .join(
+                Poll,
+                and_(
+                    Poll.id == poll_id,
+                )
+            )
+            .where(
+                Poll.id == poll_id,
+            )
+        )
+    return session.scalars(stmt).one()
 
 
 def get_template_by_cbdata(

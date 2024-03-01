@@ -1,31 +1,32 @@
 import asyncio
-import os
+from typing import NamedTuple
 
-from aiogram import Bot
 from aiogram import Dispatcher
 from aiogram import types
-from aiogram.enums import ParseMode
 from aiogram.filters import Command
-from aiogram.filters import CommandObject
 from aiogram.filters import CommandStart
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
+from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineQuery
 from aiogram.types import Message
 from aiogram.types.callback_query import CallbackQuery
+from aiogram.types.inline_query_result_article import InlineQueryResultArticle
+from aiogram.types.input_text_message_content import InputTextMessageContent
 from aiogram.utils.markdown import hbold
 from alembic import command
 from alembic.config import Config
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from gigapoll import kb
+from gigapoll.bot import bot
+from gigapoll.button import CallbackButton
 from gigapoll.data import db_session
 from gigapoll.data.models import Button
 from gigapoll.data.models import Template
-from gigapoll.dto import AggUsersByButton
-from gigapoll.dto import ButtonDTO
-from gigapoll.dto import CntPerValue
-from gigapoll.dto import UserChoiceDTO
 from gigapoll.enums import Modes
+from gigapoll.filters import CallbackWithoutMessage
 from gigapoll.services import buttons_service
 from gigapoll.services import choice_service
 from gigapoll.services import poll_service
@@ -35,45 +36,13 @@ from gigapoll.states import PlusMinusChoices
 from gigapoll.utils import generate_poll_text
 from gigapoll.utils import set_my_commands
 
-TOKEN = os.environ['POLL_TOKEN']
 
 dp = Dispatcher()
 
 
-def _cnt_per_option_to_buttonDTO(
-        cnt_per_option: list[CntPerValue],
-        template: Template,
-) -> list[ButtonDTO]:
-
-    return [
-            ButtonDTO(
-                    description=template.description,
-                    name=template.name,
-                    button_name=dto.button_name,
-                    button_cbdata=str(dto.button_cbdata),
-                    votes=dto.cnt,
-                )
-            for dto
-            in cnt_per_option
-        ]
-
-
-def _poll_choice_to_agg_user_per_button(
-        all_choices: list[UserChoiceDTO],
-) -> list[AggUsersByButton]:
-    choice_models: dict[str, list[str]] = {}
-    for uc_dto in all_choices:
-        if uc_dto.choice not in choice_models:
-            choice_models[uc_dto.choice] = []
-        choice_models[uc_dto.choice].append(uc_dto.first_name)
-    return [
-            AggUsersByButton(
-                button_value=k,
-                users=v,
-            )
-            for k, v
-            in choice_models.items()
-        ]
+class CallbackReply(NamedTuple):
+    text: str
+    markup: InlineKeyboardMarkup
 
 
 @dp.message(CommandStart())
@@ -165,7 +134,7 @@ async def create_plus_minus_template(
     return template
 
 
-async def save_plus_minus_choices(
+async def save_plus_minus_buttons(
         template_id: int,
         state: FSMContext,
         session: Session,
@@ -197,106 +166,135 @@ async def writing_negative_choice(message: Message, state: FSMContext) -> None:
 
     await state.update_data(negative_choice=message.text)
     template = await create_plus_minus_template(message, state, session)
-    await save_plus_minus_choices(template.id, state, session)
+    await save_plus_minus_buttons(template.id, state, session)
     await state.clear()
     await message.answer('Шаблон сохранен')
 
 
-@dp.message(Command('gigapoll'))
-async def run_pull(
-        message: Message,
-        command: CommandObject,
+def _save_plus_minus_choice(
+        button_id: int,
+        poll_id: int,
+        cb: CallbackQuery,
+        session: Session,
 ) -> None:
-    session = next(db_session.create_session())
-    if not command.args:
-        await message.reply('It cannot be empty')
-        return
-
-    if not message.from_user:
-        return
-
-    new_template_settings = template_service.get_new_template(
-            user_id=message.from_user.id,
-            template_name=command.args.strip(),
-            session=session,
-        )
-    reply_markup = kb.get_poll_kb(new_template_settings)
-
-    response_text = generate_poll_text(
-            description=new_template_settings[0].description,
-        )
-
-    message_responce = await message.answer(
-            response_text,
-            reply_markup=reply_markup,
-        )
-
-    poll_service.resigter_poll(
-            owner_id=message.from_user.id,
-            message_id=message_responce.message_id,
-            message_thread_id=message_responce.message_thread_id,
-            chat_id=message_responce.chat.id,
-            template_name=new_template_settings[0].name,
-            session=session,
-        )
-
-
-@dp.callback_query()
-async def user_choice_processing(cb: CallbackQuery) -> None:
-    session = next(db_session.create_session())
-    if not cb.data or not cb.message or not isinstance(cb.message, Message):
-        return
-
-    choice_service.add_choice(
+    button = buttons_service.get_button(button_id, session)
+    if button.is_negative:
+        choice_service.delete_all_user_choices_from_poll(
+                user_id=cb.from_user.id,
+                poll_id=poll_id,
+                session=session,
+            )
+    choice_service.add_positive_choice(
             user_id=cb.from_user.id,
-            message_id=cb.message.message_id,
-            # message_thread_id=cb.message.message_thread_id,
             first_name=cb.from_user.first_name,
             last_name=cb.from_user.last_name,
             username=cb.from_user.username,
-            chat_id=cb.message.chat.id,
-            cbdata=cb.data,
+            poll_id=poll_id,
+            button_id=button_id,
             session=session,
         )
 
-    template = template_service.get_template_by_cbdata(
-            message_id=cb.message.message_id,
-            chat_id=cb.message.chat.id,
+
+def save_choice_via_mode(
+        cb: CallbackQuery,
+        template: Template,
+        session: Session,
+) -> None:
+    assert cb.data
+
+    if template.mode == Modes.PLUS_MINUS:
+        button_id, poll_id = CallbackButton.parse_cbdata(cb.data)
+        _save_plus_minus_choice(button_id, poll_id, cb, session)
+
+
+async def handle_user_choice(
+        cb: CallbackQuery,
+        session: Session,
+) -> CallbackReply:
+    assert cb.data
+
+    _, poll_id = CallbackButton.parse_cbdata(cb.data)
+    template = template_service.get_template_by_poll_id(
+            poll_id=poll_id,
             session=session,
         )
+
+    save_choice_via_mode(cb, template, session)
 
     cnt_per_option = choice_service.get_poll_choices_per_option(
-            message_id=cb.message.message_id,
-            chat_id=cb.message.chat.id,
+            template_id=template.id,
+            poll_id=poll_id,
             session=session,
         )
 
     all_choices = choice_service.get_all_poll_choices(
-            message_id=cb.message.message_id,
-            chat_id=cb.message.chat.id,
+            poll_id=poll_id,
             session=session,
         )
 
-    agg_users_per_value = _poll_choice_to_agg_user_per_button(all_choices)
-    button_dtos = _cnt_per_option_to_buttonDTO(cnt_per_option, template)
+    for b in cnt_per_option:
+        b.extend_button(poll_id)
 
-    markup = kb.get_poll_kb(button_dtos)
-    text = generate_poll_text(template.description, agg_users_per_value)
+    markup = kb.get_poll_kb(cnt_per_option)
+    text = generate_poll_text(template.description, choices=all_choices)
+    return CallbackReply(text, markup)
 
-    await cb.message.edit_text(text=text)
-    await cb.message.edit_reply_markup(reply_markup=markup)
+
+@dp.callback_query(CallbackWithoutMessage())
+async def user_choice_processing(cb: CallbackQuery) -> None:
+    session = next(db_session.create_session())
+
+    reply = await handle_user_choice(cb=cb, session=session)
+    await bot.edit_message_text(
+            inline_message_id=cb.inline_message_id,
+            text=reply.text,
+            reply_markup=reply.markup,
+        )
     await cb.answer()
 
 
-@dp.message(StateFilter(None))
-async def echo_handler(message: Message) -> None:
-    assert message.text
+@dp.inline_query(StateFilter(None))
+async def start_poll_from_inline(inline_query: InlineQuery) -> None:
+    session = next(db_session.create_session())
 
-    await message.answer(text=message.text)
+    try:
+        t = template_service.get_template_by_name(
+                user_id=inline_query.from_user.id,
+                template_name=inline_query.query,
+                session=session,
+            )
+    except NoResultFound:
+        return
+
+    poll = poll_service.resigter_poll(
+            template_id=t.id,
+            session=session,
+        )
+
+    poll_buttons = template_service.get_buttons_for_empty_poll(
+            template_id=t.id,
+            session=session,
+        )
+
+    for b in poll_buttons:
+        b.extend_button(poll.id)
+
+    result = [
+            InlineQueryResultArticle(
+                id=t.name,
+                title=t.name,
+                description=t.description,
+                input_message_content=InputTextMessageContent(
+                    message_text=t.description,
+                ),
+                parse_mode='HTML',
+                reply_markup=kb.get_poll_kb(poll_buttons),
+            )
+        ]
+    await inline_query.answer(result, is_personal=True, cache_time=1)
 
 
 async def _main() -> None:
-    bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
     await set_my_commands(bot)
     await dp.start_polling(bot)
 

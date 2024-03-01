@@ -1,16 +1,6 @@
 from typing import NamedTuple
 
 
-class ButtonDTO(NamedTuple):
-    button_name: str
-    button_cbdata: str
-    votes: int
-
-    @property
-    def public_name(self) -> str:
-        return f'{self.button_name} ({self.votes} votes)'
-
-
 class UserDTO(NamedTuple):
     user_id: int
     first_name: str

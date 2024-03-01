@@ -4,9 +4,9 @@ from sqlalchemy import select
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from gigapoll.button import CallbackButton
 from gigapoll.data.models import Button
 from gigapoll.data.models import Choice
-from gigapoll.dto import ButtonDTO
 from gigapoll.dto import UserDTO
 from gigapoll.dto import UserWithChoiceDTO
 
@@ -27,17 +27,15 @@ def get_poll_choices_models(
 
 
 def get_poll_choices_per_option(
-        message_id: int,
-        chat_id: int,
+        poll_id: int,
         template_id: int,
         session: Session,
-) -> list[ButtonDTO]:
+) -> list[CallbackButton]:
 
     subq = (
-            select(Choice.id, Choice.cbdata)
+            select(Choice.id, Choice.button_id)
             .where(
-                Choice.message_id == message_id,
-                Choice.chat_id == chat_id,
+                Choice.poll_id == poll_id,
             )
             .subquery('choices')
         )
@@ -49,16 +47,16 @@ def get_poll_choices_per_option(
                 func.count(subq.c.id).label('cnt'),
             ).outerjoin(
                 subq,
-                Button.id == subq.c.cbdata
+                Button.id == subq.c.button_id,
             ).group_by(Button.value, Button.id)
             .where(Button.template_id == template_id)
             .subquery()
         )
 
     return [
-            ButtonDTO(
+            CallbackButton(
                 button_name=getattr(r, 'value'),
-                button_cbdata=str(getattr(r, 'id')),
+                button_id=getattr(r, 'id'),
                 votes=getattr(r, 'cnt')
             )
             for r
@@ -67,8 +65,7 @@ def get_poll_choices_per_option(
 
 
 def get_all_poll_choices(
-        message_id: int,
-        chat_id: int,
+        poll_id: int,
         session: Session,
 ) -> list[UserWithChoiceDTO]:
     sql = text(f'''
@@ -80,9 +77,8 @@ def get_all_poll_choices(
         , b.value as value
     from buttons b
     inner join choices c on
-        b.id = c.cbdata
-        and c.message_id = {message_id}
-        and c.chat_id = {chat_id}
+        b.id = c.button_id
+        and c.poll_id = {poll_id}
     window w as (
         PARTITION by c.user_id
         order by c.cdate DESC
@@ -129,10 +125,9 @@ def add_choice(
 
 def add_positive_choice(
         user_id: int,
-        message_id: int,
-        chat_id: int,
-        cbdata: str,
         first_name: str,
+        button_id: int,
+        poll_id: int,
         last_name: str | None,
         username: str | None,
         session: Session,
@@ -141,10 +136,9 @@ def add_positive_choice(
             select(Choice)
             .where(
                 Choice.user_id == user_id,
-                Choice.chat_id == chat_id,
-                Choice.message_id == message_id,
+                Choice.poll_id == poll_id,
             )
-            .join(Button, Choice.cbdata == Button.id)
+            .join(Button, Choice.button_id == Button.id)
             .where(Button.is_negative)
         )
     negative = session.scalars(stmt).all()
@@ -155,9 +149,8 @@ def add_positive_choice(
         session.execute(delete_stmt)
     c = Choice(
             user_id=user_id,
-            message_id=message_id,
-            chat_id=chat_id,
-            cbdata=cbdata,
+            poll_id=poll_id,
+            button_id=button_id,
             first_name=first_name,
             last_name=last_name,
             username=username,
@@ -168,15 +161,13 @@ def add_positive_choice(
 
 
 def delete_all_user_choices_from_poll(
+        poll_id: int,
         user_id: int,
-        message_id: int,
-        chat_id: int,
         session: Session,
 ) -> None:
     stmt = delete(Choice).where(
-            Choice.chat_id == chat_id,
+            Choice.poll_id == poll_id,
             Choice.user_id == user_id,
-            Choice.message_id == message_id,
         )
     session.execute(stmt)
     session.commit()

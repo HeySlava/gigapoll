@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from gigapoll.dto import ButtonDTO
+from gigapoll.button import CallbackButton
 from gigapoll.enums import Modes
 
 
@@ -12,13 +12,13 @@ def get_different_modes_kb() -> InlineKeyboardMarkup:
 
 
 def get_poll_kb(
-        poll_buttons: list[ButtonDTO],
+        poll_buttons: list[CallbackButton],
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for b in poll_buttons:
         kb.button(
-                text=b.public_name,
-                callback_data=b.button_cbdata,
+                text=b.get_public_name(),
+                callback_data=b.get_cbdata(),
             )
     kb.adjust(1)
     return kb.as_markup()
