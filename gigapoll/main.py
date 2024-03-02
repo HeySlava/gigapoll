@@ -1,8 +1,10 @@
 import asyncio
+import contextlib
 from typing import NamedTuple
 
 from aiogram import Dispatcher
 from aiogram import types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.filters import CommandStart
 from aiogram.filters import StateFilter
@@ -62,6 +64,27 @@ async def new_template(
             'Введи название своего шаблона. '
             'Это техническое имя, с помощью которого ты '
             'будешь вызывать голосование'
+        )
+
+
+@dp.message(Command('publish'))
+async def handle_publish(
+        message: Message,
+        state: FSMContext,
+) -> None:
+    assert message.from_user
+
+    session = next(db_session.create_session())
+
+    await state.clear()
+    templates = template_service.get_all_templates_for_user(
+            message.from_user.id,
+            session,
+        )
+    markup = kb.get_publish_kb(templates)
+    await message.answer(
+            text='Выбери шаблон для публикации',
+            reply_markup=markup,
         )
 
 
@@ -226,7 +249,6 @@ async def handle_user_choice(
             poll_id=poll_id,
             session=session,
         )
-
     all_choices = choice_service.get_all_poll_choices(
             poll_id=poll_id,
             session=session,
@@ -245,11 +267,12 @@ async def user_choice_processing(cb: CallbackQuery) -> None:
     session = next(db_session.create_session())
 
     reply = await handle_user_choice(cb=cb, session=session)
-    await bot.edit_message_text(
-            inline_message_id=cb.inline_message_id,
-            text=reply.text,
-            reply_markup=reply.markup,
-        )
+    with contextlib.suppress(TelegramBadRequest):
+        await bot.edit_message_text(
+                inline_message_id=cb.inline_message_id,
+                text=reply.text,
+                reply_markup=reply.markup,
+            )
     await cb.answer()
 
 

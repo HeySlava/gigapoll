@@ -1,7 +1,11 @@
+from textwrap import shorten
+from typing import Sequence
+
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from gigapoll.button import CallbackButton
+from gigapoll.data.models import Template
 from gigapoll.enums import Modes
 
 
@@ -19,6 +23,21 @@ def get_poll_kb(
         kb.button(
                 text=b.get_public_name(),
                 callback_data=b.get_cbdata(),
+            )
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def get_publish_kb(
+        templates: Sequence[Template],
+) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    for t in templates:
+        text = f'{t.name} ->  {t.description}'
+        wrapped = shorten(text, width=40, placeholder=' ...')
+        kb.button(
+                text=wrapped,
+                switch_inline_query=t.name,
             )
     kb.adjust(1)
     return kb.as_markup()

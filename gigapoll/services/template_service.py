@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from sqlalchemy import delete
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -92,3 +94,11 @@ def get_template_by_poll_id(
             .where(Poll.id == poll_id)
         )
     return session.scalars(stmt).one()
+
+
+def get_all_templates_for_user(
+        user_id: int,
+        session: Session,
+) -> Sequence[Template]:
+    stmt = select(Template).where(Template.user_id == user_id)
+    return session.scalars(stmt).all()

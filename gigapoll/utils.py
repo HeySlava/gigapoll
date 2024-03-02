@@ -10,6 +10,10 @@ async def set_my_commands(bot: Bot) -> None:
     commands = [
             BotCommand(command='start', description='bot information'),
             BotCommand(
+                command='publish',
+                description='publish your template',
+            ),
+            BotCommand(
                 command='newtemplate',
                 description='create a new poll template',
             ),
