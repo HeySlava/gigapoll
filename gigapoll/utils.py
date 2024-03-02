@@ -4,18 +4,26 @@ from aiogram.utils.markdown import hbold
 
 from gigapoll.dto import UserDTO
 from gigapoll.dto import UserWithChoiceDTO
+from gigapoll.enums import Commands
 
 
 async def set_my_commands(bot: Bot) -> None:
     commands = [
-            BotCommand(command='start', description='bot information'),
             BotCommand(
-                command='publish',
-                description='publish your template',
+                command=Commands.START,
+                description='получить общую информацию',
             ),
             BotCommand(
-                command='newtemplate',
-                description='create a new poll template',
+                command=Commands.HELP,
+                description='получить общую информацию',
+            ),
+            BotCommand(
+                command=Commands.PUBLISH,
+                description='опубликовать твое голосование',
+            ),
+            BotCommand(
+                command=Commands.NEWTEMPLATE,
+                description='создать новый шаблон',
             ),
         ]
     await bot.set_my_commands(commands=commands)

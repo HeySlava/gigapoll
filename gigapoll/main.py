@@ -3,10 +3,8 @@ import contextlib
 from typing import NamedTuple
 
 from aiogram import Dispatcher
-from aiogram import types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
-from aiogram.filters import CommandStart
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup
@@ -15,7 +13,6 @@ from aiogram.types import Message
 from aiogram.types.callback_query import CallbackQuery
 from aiogram.types.inline_query_result_article import InlineQueryResultArticle
 from aiogram.types.input_text_message_content import InputTextMessageContent
-from aiogram.utils.markdown import hbold
 from alembic import command
 from alembic.config import Config
 from sqlalchemy.exc import NoResultFound
@@ -27,6 +24,7 @@ from gigapoll.button import CallbackButton
 from gigapoll.data import db_session
 from gigapoll.data.models import Button
 from gigapoll.data.models import Template
+from gigapoll.enums import Commands
 from gigapoll.enums import Modes
 from gigapoll.filters import CallbackWithoutMessage
 from gigapoll.services import buttons_service
@@ -47,10 +45,29 @@ class CallbackReply(NamedTuple):
     markup: InlineKeyboardMarkup
 
 
-@dp.message(CommandStart())
-async def start_command(message: types.Message) -> None:
-    if message.from_user:
-        await message.answer(f'Hello, {hbold(message.from_user.full_name)}!')
+@dp.message(Command(Commands.START))
+@dp.message(Command(Commands.HELP))
+async def start_command(message: Message) -> None:
+    assert message.from_user
+    msg = (
+            'Это бот для создания голосовалок. Отличительная черта '
+            'в том, что после нажания на кнопку, твой выбор сразу отображаетс'
+            'я на экране'
+            '\n\n'
+            'Доступные команды'
+            '\n'
+            f'/{Commands.START}\n'
+            f'/{Commands.HELP}\n'
+            f'/{Commands.NEWTEMPLATE}\n'
+            f'/{Commands.PUBLISH}'
+            '\n\n'
+            'Этот список команд должен отобраться внизу экрана под кнопкой'
+            ' меню.'
+            '\n\n'
+            'P.S. бот находится в разработке, так что следи за новостями'
+        )
+
+    await message.answer(msg)
 
 
 @dp.message(Command('newtemplate'))
