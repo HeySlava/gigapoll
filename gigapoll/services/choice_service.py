@@ -101,19 +101,17 @@ def get_all_poll_choices(
 
 def add_choice(
         user_id: int,
-        message_id: int,
-        chat_id: int,
-        cbdata: str,
         first_name: str,
+        button_id: int,
+        poll_id: int,
         last_name: str | None,
         username: str | None,
         session: Session,
 ) -> Choice:
     c = Choice(
             user_id=user_id,
-            message_id=message_id,
-            chat_id=chat_id,
-            cbdata=cbdata,
+            button_id=button_id,
+            poll_id=poll_id,
             first_name=first_name,
             last_name=last_name,
             username=username,
@@ -170,4 +168,24 @@ def delete_all_user_choices_from_poll(
             Choice.user_id == user_id,
         )
     session.execute(stmt)
+    session.commit()
+
+
+def get_last_user_choice_for_poll(
+        poll_id: int,
+        user_id: int,
+        session: Session,
+) -> Choice | None:
+    stmt = select(Choice).where(
+            Choice.poll_id == poll_id,
+            Choice.user_id == user_id,
+        ).order_by(Choice.cdate.desc()).limit(1)
+    return session.scalars(stmt).one_or_none()
+
+
+def delete_choice(
+        choice: Choice,
+        session: Session,
+) -> None:
+    session.delete(choice)
     session.commit()
