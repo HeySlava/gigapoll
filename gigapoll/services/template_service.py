@@ -1,4 +1,3 @@
-from sqlalchemy import and_
 from sqlalchemy import delete
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -91,27 +90,5 @@ def get_template_by_poll_id(
             select(Template)
             .join(Poll)
             .where(Poll.id == poll_id)
-        )
-    return session.scalars(stmt).one()
-
-
-def get_template_by_cbdata(
-        chat_id: int,
-        message_id: int,
-        session: Session,
-) -> Template:
-    stmt = (
-            select(Template)
-            .join(
-                Poll,
-                and_(
-                    Poll.template_name == Template.name,
-                    Poll.owner_id == Template.user_id,
-                )
-            )
-            .where(
-                Poll.chat_id == chat_id,
-                Poll.message_id == message_id,
-            )
         )
     return session.scalars(stmt).one()
