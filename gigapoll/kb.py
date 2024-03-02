@@ -15,7 +15,7 @@ def get_poll_kb(
         poll_buttons: list[CallbackButton],
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    for b in poll_buttons:
+    for b in sorted(poll_buttons, key=lambda x: x.button_id):
         kb.button(
                 text=b.get_public_name(),
                 callback_data=b.get_cbdata(),

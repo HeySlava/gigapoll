@@ -83,7 +83,7 @@ def get_all_poll_choices(
         PARTITION by c.user_id
         order by c.cdate DESC
     )
-    order by c.cdate''')
+    order by b.id, c.cdate''')
 
     result = []
     for r in session.execute(sql):
