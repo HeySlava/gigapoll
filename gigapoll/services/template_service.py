@@ -89,15 +89,8 @@ def get_template_by_poll_id(
 ) -> Template:
     stmt = (
             select(Template)
-            .join(
-                Poll,
-                and_(
-                    Poll.id == poll_id,
-                )
-            )
-            .where(
-                Poll.id == poll_id,
-            )
+            .join(Poll)
+            .where(Poll.id == poll_id)
         )
     return session.scalars(stmt).one()
 
