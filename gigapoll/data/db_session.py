@@ -3,6 +3,7 @@ from typing import Generator
 
 import sqlalchemy as sa
 from sqlalchemy import orm
+from sqlalchemy.pool import NullPool
 
 
 _factory = None
@@ -26,6 +27,7 @@ def global_init(
     engine = sa.create_engine(
             conn_str, echo=echo,
             connect_args={'check_same_thread': False},
+            poolclass=NullPool,
         )
 
     _factory = orm.sessionmaker(bind=engine)
