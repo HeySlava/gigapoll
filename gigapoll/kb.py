@@ -37,7 +37,7 @@ def get_publish_kb(
         wrapped = shorten(text, width=40, placeholder=' ...')
         kb.button(
                 text=wrapped,
-                switch_inline_query=t.name,
+                switch_inline_query=str(t.id),
             )
     kb.adjust(1)
     return kb.as_markup()

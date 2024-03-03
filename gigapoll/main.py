@@ -64,7 +64,8 @@ async def start_command(message: Message) -> None:
             'Этот список команд должен отобраться внизу экрана под кнопкой'
             ' меню.'
             '\n\n'
-            'P.S. бот находится в разработке, так что следи за новостями'
+            'P.S. в будущем добавится удобное меню для работы со своими '
+            'шаблонами.'
         )
 
     await message.answer(msg)
@@ -84,7 +85,7 @@ async def new_template(
         )
 
 
-@dp.message(Command('publish'))
+@dp.message(Command(Commands.PUBLISH))
 async def handle_publish(
         message: Message,
         state: FSMContext,
@@ -316,9 +317,9 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
     session = next(db_session.create_session())
 
     try:
-        t = template_service.get_template_by_name(
+        t = template_service.get_template_by_id(
                 user_id=inline_query.from_user.id,
-                template_name=inline_query.query,
+                template_id=int(inline_query.query),
                 session=session,
             )
     except NoResultFound:

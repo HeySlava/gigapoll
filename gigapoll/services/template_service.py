@@ -54,6 +54,17 @@ def get_template_by_name(
         ).one()
 
 
+def get_template_by_id(
+        user_id: int,
+        template_id: int,
+        session: Session,
+) -> Template:
+    return session.query(Template).where(
+            Template.user_id == user_id,
+            Template.id == template_id,
+        ).one()
+
+
 def get_buttons_for_empty_poll(
         template_id: int,
         session: Session,
