@@ -48,3 +48,10 @@ def generate_poll_text(
         for index, (user, count) in enumerate(user_count_dict.items(), 1):
             text += f'  {index}. {user.inline_user_html} ({count} votes)\n'
     return text.strip()
+
+
+def try_int(value: str) -> int:
+    try:
+        return int(value)
+    except ValueError:
+        return -1

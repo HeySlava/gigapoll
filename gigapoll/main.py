@@ -35,6 +35,7 @@ from gigapoll.states import CreateTemplate
 from gigapoll.states import PlusMinusChoices
 from gigapoll.utils import generate_poll_text
 from gigapoll.utils import set_my_commands
+from gigapoll.utils import try_int
 
 
 dp = Dispatcher()
@@ -319,7 +320,7 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
     try:
         t = template_service.get_template_by_id(
                 user_id=inline_query.from_user.id,
-                template_id=int(inline_query.query),
+                template_id=try_int(inline_query.query),
                 session=session,
             )
     except NoResultFound:
