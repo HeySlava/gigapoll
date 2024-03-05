@@ -44,7 +44,7 @@ def generate_poll_text(
     text = description
     text = f'{text}\n\n'
     for choice, user_count_dict in d.items():
-        text += f'{hbold(choice)}\n'
+        text += f'{hbold(choice)}\n\n'
         for index, (user, count) in enumerate(user_count_dict.items(), 1):
             text += f'  {index}. {user.inline_user_html} ({count} votes)\n'
     return text.strip()

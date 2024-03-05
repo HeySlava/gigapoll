@@ -351,6 +351,7 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
                 description=t.description,
                 input_message_content=InputTextMessageContent(
                     message_text=t.description,
+                    disable_web_page_preview=True,
                 ),
                 reply_markup=kb.get_poll_kb(poll_buttons),
             )
