@@ -191,7 +191,7 @@ def delete_choice(
     session.commit()
 
 
-def get_number_of_choice_for_poll_in_last_minute(
+def get_number_of_choice(
         poll_id: int,
         session: Session,
 ) -> int:

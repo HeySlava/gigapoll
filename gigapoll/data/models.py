@@ -92,7 +92,7 @@ class Choice(Base):
         )
     cdate: Mapped[dt.datetime] = mapped_column(
             DateTime,
-            default=dt.datetime.now,
+            default=dt.datetime.utcnow,
         )
 
 

@@ -26,6 +26,7 @@ from gigapoll.data.models import Button
 from gigapoll.data.models import Template
 from gigapoll.enums import Commands
 from gigapoll.enums import Modes
+from gigapoll.filters import CallbackFloodControl
 from gigapoll.filters import CallbackWithoutMessage
 from gigapoll.services import buttons_service
 from gigapoll.services import choice_service
@@ -39,6 +40,9 @@ from gigapoll.utils import try_int
 
 
 dp = Dispatcher()
+
+
+MSG_CHANGE_LIMIT_NUMBER = 15
 
 
 class CallbackReply(NamedTuple):
@@ -304,7 +308,7 @@ async def handle_user_choice(
     return CallbackReply(text, markup)
 
 
-@dp.callback_query(CallbackWithoutMessage())
+@dp.callback_query(CallbackFloodControl(MSG_CHANGE_LIMIT_NUMBER))
 async def user_choice_processing(cb: CallbackQuery) -> None:
     session = next(db_session.create_session())
 
@@ -361,6 +365,18 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
             result,
             is_personal=True,
             cache_time=1,
+        )
+
+
+@dp.callback_query(CallbackWithoutMessage())
+async def always_callback(cb: CallbackQuery) -> None:
+    assert cb.data
+    await cb.answer(
+            text=(
+                'Голос не учитан. '
+                'Попробуй проголосовать через несколько секунд'
+            ),
+            show_alert=True,
         )
 
 
