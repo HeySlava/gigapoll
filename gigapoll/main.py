@@ -314,6 +314,7 @@ async def user_choice_processing(cb: CallbackQuery) -> None:
                 inline_message_id=cb.inline_message_id,
                 text=reply.text,
                 reply_markup=reply.markup,
+                disable_web_page_preview=True,
             )
     await cb.answer()
 
@@ -356,7 +357,11 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
                 reply_markup=kb.get_poll_kb(poll_buttons),
             )
         ]
-    await inline_query.answer(result, is_personal=True, cache_time=1)
+    await inline_query.answer(
+            result,
+            is_personal=True,
+            cache_time=1,
+        )
 
 
 async def _main() -> None:
