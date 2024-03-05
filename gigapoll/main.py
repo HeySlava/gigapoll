@@ -100,11 +100,16 @@ async def handle_publish(
             message.from_user.id,
             session,
         )
-    markup = kb.get_publish_kb(templates)
-    await message.answer(
-            text='Выбери шаблон для публикации',
-            reply_markup=markup,
-        )
+    if templates:
+        markup = kb.get_publish_kb(templates)
+        await message.answer(
+                text='Выбери шаблон для публикации',
+                reply_markup=markup,
+            )
+    else:
+        await message.answer(
+                text='У тебя нет шаблонов для публикации',
+            )
 
 
 @dp.message(CreateTemplate.writing_name)
