@@ -21,7 +21,7 @@ def get_poll_kb(
     kb = InlineKeyboardBuilder()
     for b in sorted(poll_buttons, key=lambda x: x.button_id):
         kb.button(
-                text=b.get_public_name(),
+                text=b.button_name,
                 callback_data=b.get_cbdata(),
             )
     kb.adjust(1)
