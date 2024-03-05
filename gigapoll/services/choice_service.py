@@ -189,3 +189,13 @@ def delete_choice(
 ) -> None:
     session.delete(choice)
     session.commit()
+
+
+def get_number_of_choice_for_poll_in_last_minute(
+        poll_id: int,
+        session: Session,
+) -> int:
+    return session.query(func.count(Choice.id)).filter(
+        Choice.poll_id == poll_id,
+        Choice.cdate >= func.datetime('now', '-1 minute')
+    ).scalar()
