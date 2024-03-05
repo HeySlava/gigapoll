@@ -346,13 +346,12 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
 
     result = [
             InlineQueryResultArticle(
-                id=t.name,
+                id=str(t.id),
                 title=t.name,
                 description=t.description,
                 input_message_content=InputTextMessageContent(
                     message_text=t.description,
                 ),
-                parse_mode='HTML',
                 reply_markup=kb.get_poll_kb(poll_buttons),
             )
         ]
