@@ -1,6 +1,5 @@
 from typing import Sequence
 
-from sqlalchemy import delete
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -18,19 +17,6 @@ def create_template(
         session: Session,
         version: int = 1,
 ) -> Template:
-    template = session.query(Template).where(
-            Template.user_id == user_id,
-            Template.name == template_name,
-        ).one_or_none()
-
-    if template:
-        stmt = delete(Button).where(
-                Button.template_id == template.id,
-            )
-        session.delete(template)
-        session.execute(stmt)
-        session.commit()
-
     template = Template(
             user_id=user_id,
             name=template_name,
