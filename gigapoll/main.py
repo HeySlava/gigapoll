@@ -373,7 +373,7 @@ async def always_callback(cb: CallbackQuery) -> None:
     assert cb.data
     await cb.answer(
             text=(
-                'Голос не учитан. '
+                'Голос не учтён. '
                 'Попробуй проголосовать через несколько секунд'
             ),
             show_alert=True,
