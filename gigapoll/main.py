@@ -222,48 +222,6 @@ async def writing_negative_choice(message: Message, state: FSMContext) -> None:
     await message.answer('Шаблон сохранен')
 
 
-def _save_plus_minus_choice(
-        button_id: int,
-        poll_id: int,
-        cb: CallbackQuery,
-        session: Session,
-) -> None:
-    new_button = buttons_service.get_button(button_id, session)
-    last_choice = choice_service.get_last_user_choice_for_poll(
-            user_id=cb.from_user.id,
-            poll_id=poll_id,
-            session=session,
-        )
-    if not last_choice:
-        choice_service.add_choice(
-                user_id=cb.from_user.id,
-                first_name=cb.from_user.first_name,
-                last_name=cb.from_user.last_name,
-                username=cb.from_user.username,
-                poll_id=poll_id,
-                button_id=button_id,
-                session=session,
-            )
-        return
-
-    last_button = buttons_service.get_button(last_choice.button_id, session)
-    if (
-            (last_button.is_negative and new_button.is_positive) or
-            (last_button.is_positive and new_button.is_negative)
-    ):
-        choice_service.delete_choice(last_choice, session)
-    else:
-        choice_service.add_choice(
-                user_id=cb.from_user.id,
-                first_name=cb.from_user.first_name,
-                last_name=cb.from_user.last_name,
-                username=cb.from_user.username,
-                poll_id=poll_id,
-                button_id=button_id,
-                session=session,
-            )
-
-
 def save_choice_via_mode(
         cb: CallbackQuery,
         template: Template,
@@ -273,7 +231,15 @@ def save_choice_via_mode(
 
     if template.mode == Modes.PLUS_MINUS:
         button_id, poll_id = CallbackButton.parse_cbdata(cb.data)
-        _save_plus_minus_choice(button_id, poll_id, cb, session)
+        choice_service.add_choice(
+                user_id=cb.from_user.id,
+                first_name=cb.from_user.first_name,
+                last_name=cb.from_user.last_name,
+                username=cb.from_user.username,
+                poll_id=poll_id,
+                button_id=button_id,
+                session=session,
+            )
 
 
 async def handle_user_choice(
@@ -295,7 +261,7 @@ async def handle_user_choice(
             poll_id=poll_id,
             session=session,
         )
-    all_choices = choice_service.get_all_poll_choices(
+    all_choices = choice_service.get_plus_minus_poll_choices(
             poll_id=poll_id,
             session=session,
         )
