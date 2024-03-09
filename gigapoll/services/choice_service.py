@@ -145,23 +145,34 @@ WITH cte AS (
             )
         ) t
     )
-    SELECT
-    user_id
-    , first_name
-    , last_name
-    , username
-    , value
-    FROM cte
-    WHERE is_positive AND rn > max_neg AND max_pos - max_neg > 0
-    UNION ALL
-    SELECT
-    user_id
-    , first_name
-    , last_name
-    , username
-    , value
-    FROM cte
-    WHERE is_negative AND rn > max_pos AND max_neg - max_pos > 0;
+    select
+        user_id
+        , first_name
+        , last_name
+        , username
+        , value
+    from (
+        SELECT
+            user_id
+            , first_name
+            , last_name
+            , username
+            , value
+            , cdate
+        FROM cte
+        WHERE is_positive AND rn > max_neg AND max_pos - max_neg > 0
+        UNION ALL
+        SELECT
+            user_id
+            , first_name
+            , last_name
+            , username
+            , value
+            , cdate
+        FROM cte
+        WHERE is_negative AND rn > max_pos AND max_neg - max_pos > 0
+    ) t
+    order by cdate;
 ''')
 
     sql = sql.bindparams(poll_id=poll_id)
