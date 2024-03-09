@@ -99,6 +99,87 @@ def get_all_poll_choices(
     return result
 
 
+def get_plus_minus_poll_choices(
+        poll_id: int,
+        session: Session,
+) -> list[UserWithChoiceDTO]:
+    sql = text('''
+WITH cte AS (
+    SELECT
+        user_id
+        , first_name
+        , last_name
+        , username
+        , value
+        , is_positive
+        , is_negative
+        , poll_id
+        , cdate
+        , ROW_NUMBER() OVER (
+            PARTITION BY poll_id, user_id, value ORDER BY cdate
+        ) AS rn
+        , COALESCE(MAX(rn) FILTER (WHERE is_negative) OVER (
+            PARTITION BY poll_id, user_id), 0) AS max_neg
+        , COALESCE(MAX(rn) FILTER (WHERE is_positive) OVER (
+            PARTITION BY poll_id, user_id), 0) AS max_pos
+        FROM (
+            SELECT
+            user_id
+            , last_value(c.first_name) over w first_name
+            , last_value(c.last_name) over w last_name
+            , last_value(c.username) over w username
+            , b.value as value
+            , b.is_positive
+            , b.is_negative
+            , ROW_NUMBER() OVER (
+                PARTITION BY poll_id, user_id, value ORDER BY c.cdate
+            ) AS rn
+            , poll_id
+            , c.cdate
+            FROM choices c
+            inner join buttons b on c.button_id = b.id
+            where c.poll_id=:poll_id
+            window w as (
+                PARTITION by c.poll_id, c.user_id
+                order by c.cdate DESC
+            )
+        ) t
+    )
+    SELECT
+    user_id
+    , first_name
+    , last_name
+    , username
+    , value
+    FROM cte
+    WHERE is_positive AND rn > max_neg AND max_pos - max_neg > 0
+    UNION ALL
+    SELECT
+    user_id
+    , first_name
+    , last_name
+    , username
+    , value
+    FROM cte
+    WHERE is_negative AND rn > max_pos AND max_neg - max_pos > 0;
+''')
+
+    sql = sql.bindparams(poll_id=poll_id)
+
+    result = []
+    for r in session.execute(sql):
+        user_id, first_name, last_name, username, value = tuple(r)
+        user = UserDTO(
+                user_id=user_id,
+                first_name=first_name,
+                last_name=last_name,
+                username=username,
+            )
+        user_with_choice = UserWithChoiceDTO(user=user, choice=str(value))
+        result.append(user_with_choice)
+    return result
+
+
 def add_choice(
         user_id: int,
         first_name: str,
