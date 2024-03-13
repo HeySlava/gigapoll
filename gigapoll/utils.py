@@ -41,7 +41,7 @@ def generate_poll_text(
             d[b.choice][b.user] = 0
         d[b.choice][b.user] += 1
 
-    lines = [f'{description}\n\n']
+    lines = [f'{description}\n']
     for choice, user_count_dict in d.items():
         total_votes = sum(v for v in user_count_dict.values())
         vote_str = 'vote' if total_votes == 1 else 'votes'
