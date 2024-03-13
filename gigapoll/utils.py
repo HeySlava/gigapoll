@@ -41,15 +41,21 @@ def generate_poll_text(
             d[b.choice][b.user] = 0
         d[b.choice][b.user] += 1
 
-    text = description
-    text = f'{text}\n\n'
+    lines = [f'{description}\n\n']
     for choice, user_count_dict in d.items():
         total_votes = sum(v for v in user_count_dict.values())
-        text += f'{hbold(choice)} ({total_votes} votes)\n'
+        vote_str = 'vote' if total_votes == 1 else 'votes'
+        lines.append(f'{hbold(choice)} ({total_votes} {vote_str})')
+
         for index, (user, count) in enumerate(user_count_dict.items(), 1):
-            text += f'  {index}. {user.inline_user_html} ({count} votes)\n'
-        text += '\n'
-    return text.strip()
+            text_line = f'  {index}. {user.inline_user_html}'
+            if count > 1:
+                text_line += f' ({count} votes)'
+            lines.append(text_line)
+
+        lines.append('')
+
+    return '\n'.join(lines).strip()
 
 
 def try_int(value: str) -> int:
