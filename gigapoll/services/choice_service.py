@@ -115,6 +115,7 @@ WITH cte AS (
         , is_negative
         , poll_id
         , cdate
+        , button_id
         , ROW_NUMBER() OVER (
             PARTITION BY poll_id, user_id, value ORDER BY cdate
         ) AS rn
@@ -136,6 +137,7 @@ WITH cte AS (
             ) AS rn
             , poll_id
             , c.cdate
+            , c.button_id
             FROM choices c
             inner join buttons b on c.button_id = b.id
             where c.poll_id=:poll_id
@@ -159,6 +161,7 @@ WITH cte AS (
             , username
             , value
             , cdate
+            , button_id
         FROM cte
         WHERE is_positive AND rn > max_neg AND max_pos - max_neg > 0
         UNION ALL
@@ -169,10 +172,11 @@ WITH cte AS (
             , username
             , value
             , cdate
+            , button_id
         FROM cte
         WHERE is_negative AND rn > max_pos AND max_neg - max_pos > 0
     ) t
-    order by cdate;
+    order by button_id, cdate;
 ''')
 
     sql = sql.bindparams(poll_id=poll_id)
