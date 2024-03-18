@@ -153,8 +153,8 @@ def cbdata_to_mode(cbdata: str | None) -> Modes:
 async def selecting_mode(cb: CallbackQuery, state: FSMContext) -> None:
     assert isinstance(cb.message, Message)
 
-    await state.update_data(mode=Modes.PLUS_MINUS)
     mode = cbdata_to_mode(cb.data)
+    await state.update_data(mode=mode)
     await _update_state_via_mode(mode, state)
     await cb.message.answer('Введи название кнопки для положительного ответа')
     await cb.answer()
