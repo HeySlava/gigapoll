@@ -1,6 +1,8 @@
 from typing import Sequence
 
+from sqlalchemy import func
 from sqlalchemy import select
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm import Session
 
 from gigapoll.button import CallbackButton
@@ -97,5 +99,20 @@ def get_all_templates_for_user(
         user_id: int,
         session: Session,
 ) -> Sequence[Template]:
-    stmt = select(Template).where(Template.user_id == user_id)
+    subq = (
+        select(
+            Template,
+            func.row_number().over(
+                partition_by=Template.name,
+                order_by=Template.id.desc()
+            ).label('rn')
+        ).where(Template.user_id == user_id)
+    ).subquery()
+
+    aliased_subq = aliased(Template, subq)
+
+    stmt = (
+        select(aliased_subq)
+        .where(subq.c.rn == 1)
+    )
     return session.scalars(stmt).all()
