@@ -76,7 +76,7 @@ async def start_command(message: Message) -> None:
     await message.answer(msg)
 
 
-@dp.message(Command('newtemplate'))
+@dp.message(Command(Commands.NEWTEMPLATE))
 async def new_template(
         message: Message,
         state: FSMContext,
