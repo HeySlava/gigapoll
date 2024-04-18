@@ -366,7 +366,7 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
     session = next(db_session.create_session())
 
     try:
-        t = template_service.get_template_by_id(
+        t = template_service.get_available_template_by_id(
                 user_id=inline_query.from_user.id,
                 template_id=try_int(inline_query.query),
                 session=session,
