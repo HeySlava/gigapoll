@@ -106,7 +106,10 @@ def get_all_templates_for_user(
                 partition_by=Template.name,
                 order_by=Template.id.desc()
             ).label('rn')
-        ).where(Template.user_id == user_id)
+        ).where(
+            Template.user_id == user_id,
+            Template.is_hidden.is_(None),
+        )
     ).subquery()
 
     aliased_subq = aliased(Template, subq)
@@ -116,3 +119,19 @@ def get_all_templates_for_user(
         .where(subq.c.rn == 1)
     )
     return session.scalars(stmt).all()
+
+
+def delete_user_template(
+        template_id: int,
+        user_id: int,
+        session: Session,
+) -> None:
+
+    template = session.query(Template).where(
+            Template.user_id == user_id,
+            Template.id == template_id,
+        ).one()
+
+    template.is_hidden = True
+    session.add(template)
+    session.commit()
