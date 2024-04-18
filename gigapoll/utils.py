@@ -1,7 +1,10 @@
+from textwrap import shorten
+
 from aiogram import Bot
 from aiogram.types.bot_command import BotCommand
 from aiogram.utils.markdown import hbold
 
+from gigapoll.data.models import Template
 from gigapoll.dto import UserDTO
 from gigapoll.dto import UserWithChoiceDTO
 from gigapoll.enums import Commands
@@ -24,6 +27,10 @@ async def set_my_commands(bot: Bot) -> None:
             BotCommand(
                 command=Commands.NEWTEMPLATE,
                 description='создать новый шаблон',
+            ),
+            BotCommand(
+                command=Commands.MYTEMPLATES,
+                description='управление шаблонами',
             ),
         ]
     await bot.set_my_commands(commands=commands)
@@ -63,3 +70,9 @@ def try_int(value: str) -> int:
         return int(value)
     except ValueError:
         return -1
+
+
+def short_template_representation(template: Template) -> str:
+    text = f'{template.name} -> {template.description}'
+    wrapped = shorten(text, width=40, placeholder=' ...')
+    return wrapped

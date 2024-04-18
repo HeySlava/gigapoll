@@ -1,4 +1,3 @@
-from textwrap import shorten
 from typing import Sequence
 
 from aiogram.types import InlineKeyboardMarkup
@@ -6,7 +5,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from gigapoll.button import CallbackButton
 from gigapoll.data.models import Template
+from gigapoll.enums import Commands
 from gigapoll.enums import Modes
+from gigapoll.utils import short_template_representation
 
 
 def get_different_modes_kb() -> InlineKeyboardMarkup:
@@ -33,11 +34,44 @@ def get_publish_kb(
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for t in templates:
-        text = f'{t.name} ->  {t.description}'
-        wrapped = shorten(text, width=40, placeholder=' ...')
+        text = short_template_representation(t)
         kb.button(
-                text=wrapped,
+                text=text,
                 switch_inline_query=str(t.id),
             )
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def list_templates_to_manage(
+        templates: Sequence[Template],
+) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    for t in templates:
+        text = short_template_representation(t)
+        kb.button(
+                text=text,
+                callback_data=str(t.id),
+            )
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def template_manager_markup(
+        template: Template,
+) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(
+            text='Опубликовать шаблон',
+            switch_inline_query=str(template.id),
+        )
+    kb.button(
+            text='Удалить шаблон',
+            callback_data=f'D:{template.id}',
+        )
+    kb.button(
+            text='Назад',
+            callback_data=Commands.MYTEMPLATES,
+        )
     kb.adjust(1)
     return kb.as_markup()
