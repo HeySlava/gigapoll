@@ -69,6 +69,7 @@ async def start_command(message: Message) -> None:
             f'/{Commands.START}\n'
             f'/{Commands.HELP}\n'
             f'/{Commands.NEWTEMPLATE}\n'
+            f'/{Commands.MYTEMPLATES}\n'
             f'/{Commands.PUBLISH}'
             '\n\n'
             'Этот список команд должен отобраться внизу экрана под кнопкой'
