@@ -132,7 +132,10 @@ async def my_templates(
             session,
         )
 
-    text = 'Менеджер управления шаблонами'
+    if not templates:
+        text = 'Нет доступных шаблонов'
+    else:
+        text = 'Менеджер управления шаблонами'
     markup = kb.list_templates_to_manage(templates)
     return text, markup
 
