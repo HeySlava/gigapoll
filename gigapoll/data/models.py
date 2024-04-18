@@ -49,7 +49,7 @@ class Template(Base):
     version: Mapped[int] = mapped_column(Integer, default=1)
     mode: Mapped[str] = mapped_column(String)
     description: Mapped[str] = mapped_column(String)
-    is_hidden: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    is_hidden: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     user: Mapped['User'] = relationship(back_populates='templates')
     available_choices = relationship(
