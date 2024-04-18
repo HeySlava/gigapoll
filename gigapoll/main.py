@@ -64,14 +64,12 @@ async def start_command(message: Message) -> None:
             'в том, что после нажания на кнопку, твой выбор сразу отображаетс'
             'я на экране'
             '\n\n'
-            'Доступные команды'
+            'Доступные команды:'
             '\n'
-            f'/{Commands.START}\n'
-            f'/{Commands.HELP}\n'
-            f'/{Commands.NEWTEMPLATE}\n'
-            f'/{Commands.MYTEMPLATES}\n'
-            f'/{Commands.PUBLISH}'
-            '\n\n'
+            f' /{Commands.HELP}\n'
+            f' /{Commands.NEWTEMPLATE}\n'
+            f' /{Commands.MYTEMPLATES}\n'
+            '\n'
             'Этот список команд должен отобраться внизу экрана под кнопкой'
             ' меню.'
             '\n\n'
@@ -94,32 +92,6 @@ async def new_template(
             'Это техническое имя, с помощью которого ты '
             'будешь вызывать голосование'
         )
-
-
-@dp.message(Command(Commands.PUBLISH))
-async def handle_publish(
-        message: Message,
-        state: FSMContext,
-) -> None:
-    assert message.from_user
-
-    session = next(db_session.create_session())
-
-    await state.clear()
-    templates = template_service.get_all_templates_for_user(
-            message.from_user.id,
-            session,
-        )
-    if templates:
-        markup = kb.get_publish_kb(templates)
-        await message.answer(
-                text='Выбери шаблон для публикации',
-                reply_markup=markup,
-            )
-    else:
-        await message.answer(
-                text='У тебя нет шаблонов для публикации',
-            )
 
 
 async def my_templates(
