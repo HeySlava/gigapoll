@@ -13,6 +13,18 @@ class CallbackWithoutMessage(BaseFilter):
         return False
 
 
+class CallbackVotingWithAnyState(BaseFilter):
+    async def __call__(self, cb: CallbackQuery) -> bool:
+        if not cb.data:
+            return False
+        try:
+            CallbackButton.parse_cbdata(cb.data)
+        except Exception:
+            return False
+        else:
+            return True
+
+
 class CallbackFloodControl(BaseFilter):
     def __init__(self, msg_number: int) -> None:
         self.msg_number = msg_number
