@@ -30,7 +30,7 @@ async def set_my_commands(bot: Bot) -> None:
             ),
             BotCommand(
                 command=Commands.MYTEMPLATES,
-                description='template manager',
+                description='управление шаблонами',
             ),
         ]
     await bot.set_my_commands(commands=commands)
