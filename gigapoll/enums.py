@@ -9,5 +9,4 @@ class Commands(StrEnum):
     START = 'start'
     HELP = 'help'
     NEWTEMPLATE = 'newtemplate'
-    PUBLISH = 'publish'
     MYTEMPLATES = 'mytemplates'

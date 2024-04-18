@@ -13,16 +13,8 @@ from gigapoll.enums import Commands
 async def set_my_commands(bot: Bot) -> None:
     commands = [
             BotCommand(
-                command=Commands.START,
-                description='получить общую информацию',
-            ),
-            BotCommand(
                 command=Commands.HELP,
                 description='получить общую информацию',
-            ),
-            BotCommand(
-                command=Commands.PUBLISH,
-                description='опубликовать твое голосование',
             ),
             BotCommand(
                 command=Commands.NEWTEMPLATE,
