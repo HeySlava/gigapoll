@@ -129,6 +129,7 @@ def get_all_templates_for_user(
     stmt = (
         select(aliased_subq)
         .where(subq.c.rn == 1)
+        .order_by(subq.c.id)
     )
     return session.scalars(stmt).all()
 
