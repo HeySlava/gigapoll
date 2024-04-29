@@ -4,10 +4,8 @@ from typing import NamedTuple
 from typing import Tuple
 
 from aiogram import Dispatcher
-from aiogram import html
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
-from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineQuery
@@ -38,7 +36,6 @@ from gigapoll.services import poll_service
 from gigapoll.services import template_service
 from gigapoll.states import CreateTemplate
 from gigapoll.states import PlusMinusChoices
-from gigapoll.states import TemplateManager
 from gigapoll.utils import generate_poll_text
 from gigapoll.utils import set_my_commands
 from gigapoll.utils import short_template_representation
@@ -116,7 +113,6 @@ async def handle_template_manager_command(
         state: FSMContext,
 ) -> None:
     text, markup = await my_templates(message.from_user.id)
-    await state.set_state(TemplateManager.init)
     await message.answer(text=text, reply_markup=markup)
 
 
@@ -126,7 +122,6 @@ async def handle_template_manager_cb(
         state: FSMContext,
 ) -> None:
     text, markup = await my_templates(cb.message.chat.id)
-    await state.set_state(TemplateManager.init)
     await cb.message.edit_text(
             text=text,
             reply_markup=markup,
@@ -166,14 +161,15 @@ async def vote_not_saved(cb: CallbackQuery) -> None:
         )
 
 
-@dp.callback_query(StateFilter(TemplateManager.init))
+@dp.callback_query(CallbackFilterByPrefix(Prefix.MANAGER_LIST))
 async def select_template_to_manage(
         cb: CallbackQuery,
         state: FSMContext,
 ) -> None:
     assert cb.data
     session = next(db_session.create_session())
-    template_id = int(cb.data)
+    _, template_id = cb.data.split(':')
+    template_id = int(template_id)
     template = template_service.get_template_by_id(
             user_id=cb.from_user.id,
             template_id=template_id,
@@ -185,15 +181,14 @@ async def select_template_to_manage(
             text=short_template_representation(template),
             reply_markup=markup,
         )
-    await state.set_state(TemplateManager.select_action)
     await cb.answer()
 
 
-@dp.callback_query(StateFilter(TemplateManager.select_action))
+@dp.callback_query(CallbackFilterByPrefix(Prefix.DELETE_TEMPLATE))
 async def delete_template(cb: CallbackQuery, state: FSMContext) -> None:
     assert cb.data
     session = next(db_session.create_session())
-    verb, _, template_id = cb.data.partition(':')
+    _, _, template_id = cb.data.partition(':')
 
     templates = template_service.get_all_templates_for_user(
             user_id=cb.message.chat.id,
@@ -214,7 +209,6 @@ async def delete_template(cb: CallbackQuery, state: FSMContext) -> None:
             'Менеджер управления шаблонами',
             reply_markup=markup,
         )
-    await state.set_state(TemplateManager.init)
     await cb.answer()
 
 
@@ -425,14 +419,10 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
 async def old_poll_response(cb: CallbackQuery) -> None:
     assert cb.data
 
-    text = html.italic(html.underline(
-        'Голосование устарело, создайте новое при необходимости'
-    ))
     with contextlib.suppress(TelegramBadRequest):
-        await bot.edit_message_text(
+        await bot.edit_message_reply_markup(
                 inline_message_id=cb.inline_message_id,
-                text=text,
-                parse_mode='HTML',
+                reply_markup=None,
             )
     await cb.answer()
 

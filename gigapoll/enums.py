@@ -14,3 +14,5 @@ class Commands(StrEnum):
 
 class Prefix(StrEnum):
     VOTE = 'vote'
+    MANAGER_LIST = 'man_list'
+    DELETE_TEMPLATE = 'del_tpl'
