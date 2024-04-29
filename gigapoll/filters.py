@@ -4,6 +4,7 @@ from aiogram.types import CallbackQuery
 from gigapoll.button import CallbackButton
 from gigapoll.data import db_session
 from gigapoll.enums import Commands
+from gigapoll.enums import Prefix
 from gigapoll.services import choice_service
 
 
@@ -48,3 +49,12 @@ class CallbackTemplateManager(BaseFilter):
     async def __call__(self, cb: CallbackQuery) -> bool:
         assert cb.data
         return cb.data == Commands.MYTEMPLATES
+
+
+class CallbackFilterByPrefix(BaseFilter):
+    def __init__(self, prefix: Prefix) -> None:
+        self.prefix = prefix
+
+    async def __call__(self, cb: CallbackQuery) -> bool:
+        assert cb.data
+        return cb.data.startswith(self.prefix)

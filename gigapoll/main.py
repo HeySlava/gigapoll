@@ -4,6 +4,7 @@ from typing import NamedTuple
 from typing import Tuple
 
 from aiogram import Dispatcher
+from aiogram import html
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.filters import StateFilter
@@ -27,10 +28,10 @@ from gigapoll.data.models import Button
 from gigapoll.data.models import Template
 from gigapoll.enums import Commands
 from gigapoll.enums import Modes
+from gigapoll.enums import Prefix
+from gigapoll.filters import CallbackFilterByPrefix
 from gigapoll.filters import CallbackFloodControl
 from gigapoll.filters import CallbackTemplateManager
-from gigapoll.filters import CallbackVotingWithAnyState
-from gigapoll.filters import CallbackWithoutMessage
 from gigapoll.services import buttons_service
 from gigapoll.services import choice_service
 from gigapoll.services import poll_service
@@ -134,7 +135,7 @@ async def handle_template_manager_cb(
 
 
 @dp.callback_query(
-        CallbackVotingWithAnyState(),
+        CallbackFilterByPrefix(Prefix.VOTE),
         CallbackFloodControl(MSG_CHANGE_LIMIT_NUMBER),
     )
 async def user_choice_processing(cb: CallbackQuery) -> None:
@@ -149,6 +150,20 @@ async def user_choice_processing(cb: CallbackQuery) -> None:
                 disable_web_page_preview=True,
             )
     await cb.answer()
+
+
+@dp.callback_query(
+        CallbackFilterByPrefix(Prefix.VOTE),
+    )
+async def vote_not_saved(cb: CallbackQuery) -> None:
+    assert cb.data
+    await cb.answer(
+            text=(
+                'Голос не учтён. '
+                'Попробуй проголосовать через несколько секунд'
+            ),
+            show_alert=True,
+        )
 
 
 @dp.callback_query(StateFilter(TemplateManager.init))
@@ -406,16 +421,20 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
         )
 
 
-@dp.callback_query(CallbackWithoutMessage())
-async def always_callback(cb: CallbackQuery) -> None:
+@dp.callback_query()
+async def old_poll_response(cb: CallbackQuery) -> None:
     assert cb.data
-    await cb.answer(
-            text=(
-                'Голос не учтён. '
-                'Попробуй проголосовать через несколько секунд'
-            ),
-            show_alert=True,
-        )
+
+    text = html.italic(html.underline(
+        'Голосование устарело, создайте новое при необходимости'
+    ))
+    with contextlib.suppress(TelegramBadRequest):
+        await bot.edit_message_text(
+                inline_message_id=cb.inline_message_id,
+                text=text,
+                parse_mode='HTML',
+            )
+    await cb.answer()
 
 
 async def _main() -> None:
