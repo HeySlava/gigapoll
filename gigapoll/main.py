@@ -27,10 +27,10 @@ from gigapoll.data.models import Button
 from gigapoll.data.models import Template
 from gigapoll.enums import Commands
 from gigapoll.enums import Modes
+from gigapoll.enums import Prefix
+from gigapoll.filters import CallbackFilterByPrefix
 from gigapoll.filters import CallbackFloodControl
 from gigapoll.filters import CallbackTemplateManager
-from gigapoll.filters import CallbackVotingWithAnyState
-from gigapoll.filters import CallbackWithoutMessage
 from gigapoll.services import buttons_service
 from gigapoll.services import choice_service
 from gigapoll.services import poll_service
@@ -134,7 +134,7 @@ async def handle_template_manager_cb(
 
 
 @dp.callback_query(
-        CallbackVotingWithAnyState(),
+        CallbackFilterByPrefix(Prefix.VOTE),
         CallbackFloodControl(MSG_CHANGE_LIMIT_NUMBER),
     )
 async def user_choice_processing(cb: CallbackQuery) -> None:
@@ -149,6 +149,20 @@ async def user_choice_processing(cb: CallbackQuery) -> None:
                 disable_web_page_preview=True,
             )
     await cb.answer()
+
+
+@dp.callback_query(
+        CallbackFilterByPrefix(Prefix.VOTE),
+    )
+async def always_callback(cb: CallbackQuery) -> None:
+    assert cb.data
+    await cb.answer(
+            text=(
+                'Голос не учтён. '
+                'Попробуй проголосовать через несколько секунд'
+            ),
+            show_alert=True,
+        )
 
 
 @dp.callback_query(StateFilter(TemplateManager.init))
@@ -403,18 +417,6 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
             result,
             is_personal=True,
             cache_time=1,
-        )
-
-
-@dp.callback_query(CallbackWithoutMessage())
-async def always_callback(cb: CallbackQuery) -> None:
-    assert cb.data
-    await cb.answer(
-            text=(
-                'Голос не учтён. '
-                'Попробуй проголосовать через несколько секунд'
-            ),
-            show_alert=True,
         )
 
 

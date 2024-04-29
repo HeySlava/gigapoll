@@ -10,3 +10,7 @@ class Commands(StrEnum):
     HELP = 'help'
     NEWTEMPLATE = 'newtemplate'
     MYTEMPLATES = 'mytemplates'
+
+
+class Prefix(StrEnum):
+    VOTE = 'vote'
