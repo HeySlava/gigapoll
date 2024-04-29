@@ -4,6 +4,7 @@ from typing import NamedTuple
 from typing import Tuple
 
 from aiogram import Dispatcher
+from aiogram import html
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.filters import StateFilter
@@ -154,7 +155,7 @@ async def user_choice_processing(cb: CallbackQuery) -> None:
 @dp.callback_query(
         CallbackFilterByPrefix(Prefix.VOTE),
     )
-async def always_callback(cb: CallbackQuery) -> None:
+async def vote_not_saved(cb: CallbackQuery) -> None:
     assert cb.data
     await cb.answer(
             text=(
@@ -418,6 +419,22 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
             is_personal=True,
             cache_time=1,
         )
+
+
+@dp.callback_query()
+async def old_poll_response(cb: CallbackQuery) -> None:
+    assert cb.data
+
+    text = html.italic(html.underline(
+        'Голосование устарело, создайте новое при необходимости'
+    ))
+    with contextlib.suppress(TelegramBadRequest):
+        await bot.edit_message_text(
+                inline_message_id=cb.inline_message_id,
+                text=text,
+                parse_mode='HTML',
+            )
+    await cb.answer()
 
 
 async def _main() -> None:
