@@ -12,8 +12,3 @@ class CreateTemplate(StatesGroup):
 class PlusMinusChoices(StatesGroup):
     writing_positive_choice = State()
     writing_negative_choice = State()
-
-
-class TemplateManager(StatesGroup):
-    init = State()
-    select_action = State()

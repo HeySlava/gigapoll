@@ -7,6 +7,7 @@ from gigapoll.button import CallbackButton
 from gigapoll.data.models import Template
 from gigapoll.enums import Commands
 from gigapoll.enums import Modes
+from gigapoll.enums import Prefix
 from gigapoll.utils import short_template_representation
 
 
@@ -51,7 +52,7 @@ def list_templates_to_manage(
         text = short_template_representation(t)
         kb.button(
                 text=text,
-                callback_data=str(t.id),
+                callback_data=f'{Prefix.MANAGER_LIST}:{str(t.id)}',
             )
     kb.adjust(1)
     return kb.as_markup()
@@ -67,7 +68,7 @@ def template_manager_markup(
         )
     kb.button(
             text='Удалить шаблон',
-            callback_data=f'D:{template.id}',
+            callback_data=f'{Prefix.DELETE_TEMPLATE}:{template.id}',
         )
     kb.button(
             text='Назад',
