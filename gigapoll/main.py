@@ -84,8 +84,9 @@ async def new_template(
     await state.set_state(CreateTemplate.writing_name)
     await message.answer(
             'Введи название своего шаблона. '
-            'Это техническое имя, с помощью которого ты '
-            'будешь вызывать голосование'
+            'Это техническое имя, с помощью которого '
+            'ты будешь различать свои шаблоны. Пользователи это '
+            'название никак не увидят.'
         )
 
 
@@ -217,7 +218,7 @@ async def writing_name(message: Message, state: FSMContext) -> None:
     await state.update_data(name=message.text)
     await state.set_state(CreateTemplate.writing_description)
     await message.answer(
-            'Введи опасание. Этот текст будет видет '
+            'Введи описание. Этот текст будет видет '
             'пользователям при создании голосования'
         )
 
