@@ -15,7 +15,6 @@ from aiogram.types.inline_query_result_article import InlineQueryResultArticle
 from aiogram.types.input_text_message_content import InputTextMessageContent
 from alembic import command
 from alembic.config import Config
-from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
@@ -215,6 +214,10 @@ async def delete_template(cb: CallbackQuery, state: FSMContext) -> None:
 
 @dp.message(CreateTemplate.writing_name)
 async def writing_name(message: Message, state: FSMContext) -> None:
+    n = 2
+    if len(str(message.text)) <= n:
+        await message.answer(f'Название должно быть длиннее {n} символов')
+        return
     await state.update_data(name=message.text)
     await state.set_state(CreateTemplate.writing_description)
     await message.answer(
@@ -378,39 +381,42 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
     session = next(db_session.create_session())
 
     try:
-        t = template_service.get_available_template_by_name(
+        templates = template_service.get_available_templates_by_name_like(
                 user_id=inline_query.from_user.id,
                 template_name=inline_query.query,
                 session=session,
             )
-    except (NoResultFound, MultipleResultsFound):
+    except (NoResultFound, ValueError):
         return
 
-    poll = poll_service.resigter_poll(
-            template_id=t.id,
-            session=session,
-        )
+    result = []
+    for t in templates:
 
-    poll_buttons = template_service.get_buttons_for_empty_poll(
-            template_id=t.id,
-            session=session,
-        )
-
-    for b in poll_buttons:
-        b.extend_button(poll.id)
-
-    result = [
-            InlineQueryResultArticle(
-                id=str(t.id),
-                title=t.name,
-                description=t.description,
-                input_message_content=InputTextMessageContent(
-                    message_text=t.description,
-                    disable_web_page_preview=True,
-                ),
-                reply_markup=kb.get_poll_kb(poll_buttons),
+        poll = poll_service.resigter_poll(
+                template_id=t.id,
+                session=session,
             )
-        ]
+
+        poll_buttons = template_service.get_buttons_for_empty_poll(
+                template_id=t.id,
+                session=session,
+            )
+
+        for b in poll_buttons:
+            b.extend_button(poll.id)
+
+        result.append(
+                InlineQueryResultArticle(
+                    id=str(t.id),
+                    title=t.name,
+                    description=t.description,
+                    input_message_content=InputTextMessageContent(
+                        message_text=t.description,
+                        disable_web_page_preview=True,
+                    ),
+                    reply_markup=kb.get_poll_kb(poll_buttons),
+                )
+            )
     await inline_query.answer(
             result,
             is_personal=True,

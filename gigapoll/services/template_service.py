@@ -65,16 +65,18 @@ def get_available_template_by_id(
         ).one()
 
 
-def get_available_template_by_name(
+def get_available_templates_by_name_like(
         user_id: int,
-        template_name: int,
+        template_name: str,
         session: Session,
-) -> Template:
+) -> list[Template]:
+    if len(template_name) < 2:
+        raise ValueError
     return session.query(Template).where(
             Template.user_id == user_id,
             Template.name.like(f'%{template_name}%'),
             Template.is_hidden.is_(None),
-        ).one()
+        ).all()
 
 
 def get_buttons_for_empty_poll(

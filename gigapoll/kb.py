@@ -64,7 +64,7 @@ def template_manager_markup(
     kb = InlineKeyboardBuilder()
     kb.button(
             text='Опубликовать шаблон',
-            switch_inline_query=str(template.id),
+            switch_inline_query=template.name,
         )
     kb.button(
             text='Удалить шаблон',
