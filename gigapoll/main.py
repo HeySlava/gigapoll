@@ -15,6 +15,7 @@ from aiogram.types.inline_query_result_article import InlineQueryResultArticle
 from aiogram.types.input_text_message_content import InputTextMessageContent
 from alembic import command
 from alembic.config import Config
+from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
@@ -317,6 +318,8 @@ async def writing_negative_choice(message: Message, state: FSMContext) -> None:
     await save_plus_minus_buttons(template.id, state, session)
     await state.clear()
     await message.answer('Шаблон сохранен')
+    text, markup = await my_templates(message.from_user.id)
+    await message.answer(text=text, reply_markup=markup)
 
 
 def save_choice_via_mode(
@@ -376,12 +379,12 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
     session = next(db_session.create_session())
 
     try:
-        t = template_service.get_available_template_by_id(
+        t = template_service.get_available_template_by_name(
                 user_id=inline_query.from_user.id,
-                template_id=try_int(inline_query.query),
+                template_name=inline_query.query,
                 session=session,
             )
-    except NoResultFound:
+    except (NoResultFound, MultipleResultsFound):
         return
 
     poll = poll_service.resigter_poll(
