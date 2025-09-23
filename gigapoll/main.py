@@ -40,7 +40,6 @@ from gigapoll.states import PlusMinusChoices
 from gigapoll.utils import generate_poll_text
 from gigapoll.utils import set_my_commands
 from gigapoll.utils import short_template_representation
-from gigapoll.utils import try_int
 
 
 dp = Dispatcher()
