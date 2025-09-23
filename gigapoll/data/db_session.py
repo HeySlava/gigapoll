@@ -36,7 +36,7 @@ def global_init(
 
 
 def create_session() -> Generator[orm.Session, None, None]:
-    global _factory
+    global _factory  # noqa: F824
 
     if not _factory:
         raise Exception('You must call global_init() before using this method')
