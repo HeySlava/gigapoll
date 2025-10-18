@@ -35,7 +35,8 @@ from gigapoll.services import choice_service
 from gigapoll.services import poll_service
 from gigapoll.services import template_service
 from gigapoll.states import CreateTemplate
-from gigapoll.states import PlusMinusChoices
+from gigapoll.template_creation.strategies import STRATEGY_REGISTRY
+from gigapoll.template_creation.strategies import TemplateCreationStrategy
 from gigapoll.utils import generate_poll_text
 from gigapoll.utils import set_my_commands
 from gigapoll.utils import short_template_representation
@@ -234,15 +235,6 @@ async def writing_description(message: Message, state: FSMContext) -> None:
     await state.set_state(CreateTemplate.selecting_mode)
 
 
-async def _update_state_via_mode(
-        mode: Modes,
-        state: FSMContext,
-) -> FSMContext:
-    if mode == Modes.PLUS_MINUS:
-        await state.set_state(PlusMinusChoices.writing_positive_choice)
-    return state
-
-
 def cbdata_to_mode(cbdata: str | None) -> Modes:
     if not cbdata:
         raise ValueError('Callback data could not be empty')
@@ -254,17 +246,44 @@ async def selecting_mode(cb: CallbackQuery, state: FSMContext) -> None:
     assert isinstance(cb.message, Message)
 
     mode = cbdata_to_mode(cb.data)
-    await state.update_data(mode=mode)
-    await _update_state_via_mode(mode, state)
-    await cb.message.answer('Введи название кнопки для положительного ответа')
+    StrategyClass = STRATEGY_REGISTRY[mode]
+    strategy_instance = StrategyClass(state)
+
+    await state.update_data(mode=mode, strategy=strategy_instance)
+    await state.set_state(CreateTemplate.processing_creation)
+
+    first_question = await strategy_instance.get_next_question()
+    await cb.message.answer(first_question)
     await cb.answer()
 
 
-@dp.message(PlusMinusChoices.writing_positive_choice)
-async def writing_positive_choice(message: Message, state: FSMContext) -> None:
-    await state.update_data(positive_choice=message.text)
-    await state.set_state(PlusMinusChoices.writing_negative_choice)
-    await message.answer('Введи название кнопки для негативного ответа')
+@dp.message(CreateTemplate.processing_creation)
+async def process_creation_step(message: Message, state: FSMContext) -> None:
+    session = next(db_session.create_session())
+    user_data = await state.get_data()
+    strategy: TemplateCreationStrategy = user_data['strategy']
+
+    has_more_steps = await strategy.process_answer(message)
+
+    if has_more_steps:
+        next_question = await strategy.get_next_question()
+        await message.answer(next_question)
+    else:
+        try:
+            assert message.from_user
+            await strategy.save_template(
+                    user_id=message.from_user.id,
+                    session=session,
+                )
+            await message.answer('Шаблон успешно сохранен!')
+            await state.clear()
+
+            text, markup = await my_templates(message.from_user.id)
+            await message.answer(text=text, reply_markup=markup)
+
+        except Exception as e:
+            await message.answer(f'Не удалось сохранить шаблон: {e}')
+            await state.clear()
 
 
 async def create_plus_minus_template(
@@ -309,19 +328,6 @@ async def save_plus_minus_buttons(
             template_choices=[positive_choice, negative_choice],
             session=session,
         )
-
-
-@dp.message(PlusMinusChoices.writing_negative_choice)
-async def writing_negative_choice(message: Message, state: FSMContext) -> None:
-    session = next(db_session.create_session())
-
-    await state.update_data(negative_choice=message.text)
-    template = await create_plus_minus_template(message, state, session)
-    await save_plus_minus_buttons(template.id, state, session)
-    await state.clear()
-    await message.answer('Шаблон сохранен')
-    text, markup = await my_templates(message.from_user.id)
-    await message.answer(text=text, reply_markup=markup)
 
 
 def save_choice_via_mode(
