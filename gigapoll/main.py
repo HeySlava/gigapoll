@@ -4,6 +4,7 @@ from typing import NamedTuple
 from typing import Tuple
 
 from aiogram import Dispatcher
+from aiogram import F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -27,6 +28,7 @@ from gigapoll.data.models import Template
 from gigapoll.enums import Commands
 from gigapoll.enums import Modes
 from gigapoll.enums import Prefix
+from gigapoll.exc import StrategyFinishedError
 from gigapoll.filters import CallbackFilterByPrefix
 from gigapoll.filters import CallbackFloodControl
 from gigapoll.filters import CallbackTemplateManager
@@ -76,18 +78,13 @@ async def start_command(message: Message) -> None:
 
 
 @dp.message(Command(Commands.NEWTEMPLATE))
-async def new_template(
-        message: Message,
-        state: FSMContext,
-) -> None:
+async def new_template(message: Message, state: FSMContext) -> None:
     await state.clear()
-    await state.set_state(CreateTemplate.writing_name)
+    await state.set_state(CreateTemplate.selecting_mode)
     await message.answer(
-            'Введи название своего шаблона. '
-            'Это техническое имя, с помощью которого '
-            'ты будешь различать свои шаблоны. Пользователи это '
-            'название никак не увидят.'
-        )
+        'Выбери режим голосования',
+        reply_markup=kb.get_different_modes_kb()
+    )
 
 
 async def my_templates(
@@ -213,28 +210,6 @@ async def delete_template(cb: CallbackQuery, state: FSMContext) -> None:
     await cb.answer()
 
 
-@dp.message(CreateTemplate.writing_name)
-async def writing_name(message: Message, state: FSMContext) -> None:
-    n = 2
-    if len(str(message.text)) <= n:
-        await message.answer(f'Название должно быть длиннее {n} символов')
-        return
-    await state.update_data(name=message.text)
-    await state.set_state(CreateTemplate.writing_description)
-    await message.answer(
-            'Введи описание. Этот текст будет видет '
-            'пользователям при создании голосования'
-        )
-
-
-@dp.message(CreateTemplate.writing_description)
-async def writing_description(message: Message, state: FSMContext) -> None:
-    await state.update_data(description=message.text)
-    text = 'Выбери режим голосования'
-    await message.answer(text=text, reply_markup=kb.get_different_modes_kb())
-    await state.set_state(CreateTemplate.selecting_mode)
-
-
 def cbdata_to_mode(cbdata: str | None) -> Modes:
     if not cbdata:
         raise ValueError('Callback data could not be empty')
@@ -253,7 +228,11 @@ async def selecting_mode(cb: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(CreateTemplate.processing_creation)
 
     first_question = await strategy_instance.get_next_question()
-    await cb.message.answer(first_question)
+    await cb.message.answer(
+        first_question,
+        reply_markup=kb.get_creation_nav_kb(),
+    )
+
     await cb.answer()
 
 
@@ -262,19 +241,33 @@ async def process_creation_step(message: Message, state: FSMContext) -> None:
     session = next(db_session.create_session())
     user_data = await state.get_data()
     strategy: TemplateCreationStrategy = user_data['strategy']
+    answer_text = message.text
+    assert answer_text
+    assert message.from_user
 
-    has_more_steps = await strategy.process_answer(message)
+    try:
+        await strategy.process_answer(answer_text)
+    except ValueError as e:
+        await message.answer(
+            str(e),
+            reply_markup=kb.get_creation_nav_kb(),
+        )
+        return
 
-    if has_more_steps:
+    try:
         next_question = await strategy.get_next_question()
-        await message.answer(next_question)
-    else:
+
+        await message.answer(
+            next_question,
+            reply_markup=kb.get_creation_nav_kb(),
+        )
+
+    except StrategyFinishedError:
         try:
-            assert message.from_user
             await strategy.save_template(
-                    user_id=message.from_user.id,
-                    session=session,
-                )
+                user_id=message.from_user.id,
+                session=session,
+            )
             await message.answer('Шаблон успешно сохранен!')
             await state.clear()
 
@@ -284,6 +277,44 @@ async def process_creation_step(message: Message, state: FSMContext) -> None:
         except Exception as e:
             await message.answer(f'Не удалось сохранить шаблон: {e}')
             await state.clear()
+
+
+@dp.callback_query(
+    F.data == 'creation:cancel',
+    CreateTemplate.processing_creation
+)
+async def cancel_creation(cb: CallbackQuery, state: FSMContext) -> None:
+    assert isinstance(cb.message, Message)
+    await state.clear()
+    await cb.message.edit_text('Создание шаблона отменено.')
+    await cb.answer()
+
+
+@dp.callback_query(
+    F.data == 'creation:back',
+    CreateTemplate.processing_creation
+)
+async def back_creation_step(cb: CallbackQuery, state: FSMContext) -> None:
+    assert isinstance(cb.message, Message)
+    user_data = await state.get_data()
+    strategy: TemplateCreationStrategy = user_data['strategy']
+
+    can_go_back = await strategy.go_back()
+
+    if can_go_back:
+        prev_question = await strategy.get_next_question()
+        await cb.message.edit_text(
+            prev_question,
+            reply_markup=kb.get_creation_nav_kb()
+        )
+    else:
+        await state.set_state(CreateTemplate.selecting_mode)
+        await cb.message.edit_text(
+            'Выбери режим голосования',
+            reply_markup=kb.get_different_modes_kb(),
+        )
+
+    await cb.answer()
 
 
 async def create_plus_minus_template(
