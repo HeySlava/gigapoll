@@ -80,7 +80,7 @@ def template_manager_markup(
 
 def get_creation_nav_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text='⬅️ Назад', callback_data='creation:back')
-    kb.button(text='❌ Отмена', callback_data='creation:cancel')
+    kb.button(text='← Назад', callback_data='creation:back')
+    kb.button(text='✕ Отмена', callback_data='creation:cancel')
     kb.adjust(2)
     return kb.as_markup()
