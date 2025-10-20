@@ -224,11 +224,15 @@ async def selecting_mode(cb: CallbackQuery, state: FSMContext) -> None:
     StrategyClass = STRATEGY_REGISTRY[mode]
     strategy_instance = StrategyClass(state)
 
-    await state.update_data(mode=mode, strategy=strategy_instance)
+    await state.update_data(
+        mode=mode,
+        strategy=strategy_instance,
+        question_message_id=cb.message.message_id,
+    )
     await state.set_state(CreateTemplate.processing_creation)
 
     first_question = await strategy_instance.get_next_question()
-    await cb.message.answer(
+    await cb.message.edit_text(
         first_question,
         reply_markup=kb.get_creation_nav_kb(),
     )
@@ -242,23 +246,40 @@ async def process_creation_step(message: Message, state: FSMContext) -> None:
     user_data = await state.get_data()
     strategy: TemplateCreationStrategy = user_data['strategy']
     answer_text = message.text
+
+    question_message_id = user_data.get('question_message_id')
+    if not question_message_id:
+        await state.clear()
+        await message.answer(
+                'Ошибка: не найдено сообщение для редактирования. '
+                'Начните заново.'
+            )
+        return
+
     assert answer_text
     assert message.from_user
 
     try:
         await strategy.process_answer(answer_text)
     except ValueError as e:
-        await message.answer(
-            str(e),
-            reply_markup=kb.get_creation_nav_kb(),
-        )
+        try:
+            await bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=question_message_id,
+                text=str(e),
+                reply_markup=kb.get_creation_nav_kb(),
+            )
+        except TelegramBadRequest:
+            pass
+        await message.delete()
         return
 
     try:
         next_question = await strategy.get_next_question()
-
-        await message.answer(
-            next_question,
+        await bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=question_message_id,
+            text=next_question,
             reply_markup=kb.get_creation_nav_kb(),
         )
 
@@ -268,15 +289,25 @@ async def process_creation_step(message: Message, state: FSMContext) -> None:
                 user_id=message.from_user.id,
                 session=session,
             )
-            await message.answer('Шаблон успешно сохранен!')
+            await bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=question_message_id,
+                text='Шаблон успешно сохранен!',
+            )
             await state.clear()
 
             text, markup = await my_templates(message.from_user.id)
             await message.answer(text=text, reply_markup=markup)
 
         except Exception as e:
+            await bot.delete_message(
+                chat_id=message.chat.id,
+                message_id=question_message_id
+            )
             await message.answer(f'Не удалось сохранить шаблон: {e}')
             await state.clear()
+
+    await message.delete()
 
 
 @dp.callback_query(
