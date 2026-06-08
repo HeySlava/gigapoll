@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import logging
 from typing import NamedTuple
 from typing import Tuple
 
@@ -12,6 +13,7 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineQuery
 from aiogram.types import Message
 from aiogram.types.callback_query import CallbackQuery
+from aiogram.types.error_event import ErrorEvent
 from aiogram.types.inline_query_result_article import InlineQueryResultArticle
 from aiogram.types.input_text_message_content import InputTextMessageContent
 from alembic import command
@@ -45,6 +47,7 @@ from gigapoll.utils import short_template_representation
 
 
 dp = Dispatcher()
+logger = logging.getLogger(__name__)
 
 
 MSG_CHANGE_LIMIT_NUMBER = 15
@@ -53,6 +56,11 @@ MSG_CHANGE_LIMIT_NUMBER = 15
 class CallbackReply(NamedTuple):
     text: str
     markup: InlineKeyboardMarkup
+
+
+@dp.error()
+async def error_handler(event: ErrorEvent) -> None:
+    logger.exception('Error while processing update: %s', event.exception)
 
 
 @dp.message(Command(Commands.START))
@@ -521,6 +529,10 @@ def setup_database() -> None:
 
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+    )
     setup_database()
     asyncio.run(_main())
 

@@ -1,6 +1,8 @@
+import logging
 from textwrap import shorten
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramNetworkError
 from aiogram.types.bot_command import BotCommand
 from aiogram.utils.markdown import hbold
 
@@ -8,6 +10,8 @@ from gigapoll.data.models import Template
 from gigapoll.dto import UserDTO
 from gigapoll.dto import UserWithChoiceDTO
 from gigapoll.enums import Commands
+
+logger = logging.getLogger(__name__)
 
 
 async def set_my_commands(bot: Bot) -> None:
@@ -25,7 +29,16 @@ async def set_my_commands(bot: Bot) -> None:
                 description='управление шаблонами',
             ),
         ]
-    await bot.set_my_commands(commands=commands)
+    try:
+        await bot.set_my_commands(commands=commands)
+    except TelegramNetworkError:
+        logger.warning(
+            'Failed to set bot commands: network error (timeout)',
+        )
+    except Exception:
+        logger.warning(
+            'Failed to set bot commands', exc_info=True,
+        )
 
 
 def generate_poll_text(
