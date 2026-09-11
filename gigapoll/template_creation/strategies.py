@@ -108,6 +108,57 @@ class PlusMinusStrategy(TemplateCreationStrategy):
             raise
 
 
+class MultiSelectStrategy(TemplateCreationStrategy):
+
+    MIN_OPTIONS = 2
+    MAX_OPTIONS = 10
+
+    async def _get_question_by_step(self, step: int) -> str:
+        if step == 2:
+            return (
+                'Отправь варианты ответов, каждый с новой строки. '
+                f'Минимум {self.MIN_OPTIONS}, максимум {self.MAX_OPTIONS}.\n'
+                'Пользователи смогут выбрать любое количество вариантов'
+            )
+        raise StrategyFinishedError('There is not more questions')
+
+    async def _process_answer_by_step(self, answer: str, step: int) -> None:
+        if step == 2:
+            options = [line.strip() for line in answer.splitlines()]
+            options = [o for o in options if o]
+            if len(options) < self.MIN_OPTIONS:
+                raise ValueError(
+                        f'Нужно минимум {self.MIN_OPTIONS} варианта ответа'
+                    )
+            if len(options) > self.MAX_OPTIONS:
+                raise ValueError(
+                        f'Можно максимум {self.MAX_OPTIONS} вариантов ответа'
+                    )
+            await self.state.update_data(options=options)
+
+    async def save_template(self, user_id: int, session: Session) -> None:
+        user_data = await self.state.get_data()
+        try:
+            template = template_service.create_template(
+                user_id=user_id,
+                template_name=user_data['name'],
+                description=user_data['description'],
+                mode=user_data['mode'],
+                session=session
+            )
+            session.flush()
+            buttons = [
+                    Button(template_id=template.id, value=option)
+                    for option in user_data['options']
+                ]
+            session.add_all(buttons)
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+
+
 STRATEGY_REGISTRY: dict[Modes, type[TemplateCreationStrategy]] = {
     Modes.PLUS_MINUS: PlusMinusStrategy,
+    Modes.MULTI_SELECT: MultiSelectStrategy,
 }

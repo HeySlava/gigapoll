@@ -407,9 +407,19 @@ def save_choice_via_mode(
 ) -> None:
     assert cb.data
 
+    button_id, poll_id = CallbackButton.parse_cbdata(cb.data)
     if template.mode == Modes.PLUS_MINUS:
-        button_id, poll_id = CallbackButton.parse_cbdata(cb.data)
         choice_service.add_choice(
+                user_id=cb.from_user.id,
+                first_name=cb.from_user.first_name,
+                last_name=cb.from_user.last_name,
+                username=cb.from_user.username,
+                poll_id=poll_id,
+                button_id=button_id,
+                session=session,
+            )
+    elif template.mode == Modes.MULTI_SELECT:
+        choice_service.toggle_choice(
                 user_id=cb.from_user.id,
                 first_name=cb.from_user.first_name,
                 last_name=cb.from_user.last_name,
@@ -439,10 +449,16 @@ async def handle_user_choice(
             poll_id=poll_id,
             session=session,
         )
-    all_choices = choice_service.get_plus_minus_poll_choices(
-            poll_id=poll_id,
-            session=session,
-        )
+    if template.mode == Modes.MULTI_SELECT:
+        all_choices = choice_service.get_all_poll_choices(
+                poll_id=poll_id,
+                session=session,
+            )
+    else:
+        all_choices = choice_service.get_plus_minus_poll_choices(
+                poll_id=poll_id,
+                session=session,
+            )
 
     for b in cnt_per_option:
         b.extend_button(poll_id)

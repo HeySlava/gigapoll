@@ -3,6 +3,7 @@ from enum import StrEnum
 
 class Modes(StrEnum):
     PLUS_MINUS = '1'
+    MULTI_SELECT = '2'
 
 
 class Commands(StrEnum):

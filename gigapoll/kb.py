@@ -14,6 +14,8 @@ from gigapoll.utils import short_template_representation
 def get_different_modes_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text='ПЛЮС МИНУС', callback_data=Modes.PLUS_MINUS)
+    kb.button(text='МУЛЬТИВЫБОР', callback_data=Modes.MULTI_SELECT)
+    kb.adjust(1)
     return kb.as_markup()
 
 
