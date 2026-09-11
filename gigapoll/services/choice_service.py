@@ -195,6 +195,51 @@ WITH cte AS (
     return result
 
 
+def toggle_choice(
+        user_id: int,
+        first_name: str,
+        button_id: int,
+        poll_id: int,
+        last_name: str | None,
+        username: str | None,
+        session: Session,
+) -> None:
+    stmt = select(Choice).where(
+            Choice.poll_id == poll_id,
+            Choice.user_id == user_id,
+            Choice.button_id == button_id,
+        )
+    existing = session.scalars(stmt).all()
+    if existing:
+        delete_stmt = delete(Choice).where(
+                Choice.id.in_([c.id for c in existing])
+            )
+        session.execute(delete_stmt)
+        session.commit()
+        return
+    add_choice(
+            user_id=user_id,
+            first_name=first_name,
+            button_id=button_id,
+            poll_id=poll_id,
+            last_name=last_name,
+            username=username,
+            session=session,
+        )
+
+
+def get_user_button_choices(
+        poll_id: int,
+        user_id: int,
+        session: Session,
+) -> set[int]:
+    stmt = select(Choice.button_id).where(
+            Choice.poll_id == poll_id,
+            Choice.user_id == user_id,
+        )
+    return set(session.scalars(stmt).all())
+
+
 def add_choice(
         user_id: int,
         first_name: str,

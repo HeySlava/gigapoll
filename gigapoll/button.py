@@ -11,9 +11,6 @@ class CallbackButton:
         self.votes = votes
         self._cbdata: str | None = None
 
-    def get_public_name(self) -> str:
-        return f'{self.button_name} ({self.votes} votes)'
-
     def extend_button(self, poll_id: int) -> None:
         self._cbdata = (
                 f'{Prefix.VOTE}{self.SEP}{self.button_id}{self.SEP}{poll_id}'
