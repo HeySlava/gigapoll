@@ -15,6 +15,9 @@ def get_different_modes_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text='ПЛЮС МИНУС', callback_data=Modes.PLUS_MINUS)
     kb.button(text='МУЛЬТИВЫБОР', callback_data=Modes.MULTI_SELECT)
+    kb.button(
+        text='УЧАСТИЕ В СОБЫТИИ', callback_data=Modes.EVENT_PARTICIPATION,
+    )
     kb.adjust(1)
     return kb.as_markup()
 

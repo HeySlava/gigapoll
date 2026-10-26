@@ -44,6 +44,7 @@ async def set_my_commands(bot: Bot) -> None:
 def generate_poll_text(
         description: str,
         choices: list[UserWithChoiceDTO] = [],
+        show_guests: bool = False,
 ) -> str:
     d: dict[str, dict[UserDTO, int]] = {}
     for b in choices:
@@ -62,7 +63,10 @@ def generate_poll_text(
         for index, (user, count) in enumerate(user_count_dict.items(), 1):
             text_line = f'  {index}. {user.inline_user_html}'
             if count > 1:
-                text_line += f' ({count} votes)'
+                if show_guests:
+                    text_line += f' (+{count - 1})'
+                else:
+                    text_line += f' ({count} votes)'
             lines.append(text_line)
 
         lines.append('')

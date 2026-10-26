@@ -418,6 +418,16 @@ def save_choice_via_mode(
                 button_id=button_id,
                 session=session,
             )
+    elif template.mode == Modes.EVENT_PARTICIPATION:
+        choice_service.save_event_participation_choice(
+                user_id=cb.from_user.id,
+                first_name=cb.from_user.first_name,
+                last_name=cb.from_user.last_name,
+                username=cb.from_user.username,
+                poll_id=poll_id,
+                button_id=button_id,
+                session=session,
+            )
     elif template.mode == Modes.MULTI_SELECT:
         choice_service.toggle_choice(
                 user_id=cb.from_user.id,
@@ -449,7 +459,12 @@ async def handle_user_choice(
             poll_id=poll_id,
             session=session,
         )
-    if template.mode == Modes.MULTI_SELECT:
+    if template.mode == Modes.EVENT_PARTICIPATION:
+        all_choices = choice_service.get_event_participation_choices(
+                poll_id=poll_id,
+                session=session,
+            )
+    elif template.mode == Modes.MULTI_SELECT:
         all_choices = choice_service.get_all_poll_choices(
                 poll_id=poll_id,
                 session=session,
@@ -464,7 +479,10 @@ async def handle_user_choice(
         b.extend_button(poll_id)
 
     markup = kb.get_poll_kb(cnt_per_option)
-    text = generate_poll_text(template.description, choices=all_choices)
+    text = generate_poll_text(
+        template.description, choices=all_choices,
+        show_guests=template.mode == Modes.EVENT_PARTICIPATION,
+    )
     return CallbackReply(text, markup)
 
 

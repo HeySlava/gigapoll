@@ -2,13 +2,98 @@ from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy import text
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from gigapoll.button import CallbackButton
 from gigapoll.data.models import Button
 from gigapoll.data.models import Choice
+from gigapoll.data.models import Poll
+from gigapoll.data.models import Template
 from gigapoll.dto import UserDTO
 from gigapoll.dto import UserWithChoiceDTO
+from gigapoll.enums import Modes
+
+
+def save_event_participation_choice(
+        user_id: int,
+        first_name: str,
+        button_id: int,
+        poll_id: int,
+        last_name: str | None,
+        username: str | None,
+        session: Session,
+) -> None:
+    """Serialize this mode's read/modify/write on the existing poll row.
+
+    A no-op UPDATE acquires SQLite's write lock (or a DB row lock) before
+    reading choices, including when the user has not voted yet.
+    """
+    try:
+        session.execute(update(Poll).where(Poll.id == poll_id).values(
+            template_id=Poll.template_id,
+        ))
+        poll = session.get(Poll, poll_id)
+        button = session.get(Button, button_id)
+        template = session.get(Template, poll.template_id) if poll else None
+        if (not template or template.mode != Modes.EVENT_PARTICIPATION
+                or not button or button.template_id != template.id):
+            raise ValueError('Invalid event participation button or poll')
+        if button.is_positive and button.is_negative:
+            raise ValueError('Invalid event participation role')
+        rows = session.scalars(select(Choice).where(
+            Choice.poll_id == poll_id, Choice.user_id == user_id,
+        ).order_by(Choice.id)).all()
+        unknown = not button.is_positive and not button.is_negative
+        if unknown and len(rows) == 1 and rows[0].button_id == button_id:
+            session.commit()
+            return
+        opposite = None
+        for row in rows:
+            old_button = session.get(Button, row.button_id)
+            if unknown or (not old_button.is_positive
+                           and not old_button.is_negative):
+                session.delete(row)
+            elif opposite is None and (
+                (button.is_positive and old_button.is_negative)
+                or (button.is_negative and old_button.is_positive)
+            ):
+                opposite = row
+        if opposite is not None:
+            session.delete(opposite)
+        else:
+            session.flush()
+            session.add(Choice(
+                user_id=user_id, first_name=first_name, last_name=last_name,
+                username=username, button_id=button_id, poll_id=poll_id,
+            ))
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+
+
+def get_event_participation_choices(
+        poll_id: int,
+        session: Session,
+) -> list[UserWithChoiceDTO]:
+    rows = session.execute(select(Choice, Button).join(
+        Button, Choice.button_id == Button.id,
+    ).where(Choice.poll_id == poll_id).order_by(Button.id, Choice.id)).all()
+    latest: dict[int, Choice] = {}
+    for choice, _ in rows:
+        if (choice.user_id not in latest
+                or choice.id > latest[choice.user_id].id):
+            latest[choice.user_id] = choice
+    result = []
+    for choice, button in rows:
+        user = latest[choice.user_id]
+        result.append(UserWithChoiceDTO(
+            user=UserDTO(user.user_id, user.first_name, user.last_name,
+                         user.username),
+            choice=button.value,
+        ))
+    return result
 
 
 def get_poll_choices_models(

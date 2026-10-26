@@ -4,6 +4,7 @@ from enum import StrEnum
 class Modes(StrEnum):
     PLUS_MINUS = '1'
     MULTI_SELECT = '2'
+    EVENT_PARTICIPATION = '3'
 
 
 class Commands(StrEnum):

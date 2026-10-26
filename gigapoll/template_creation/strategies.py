@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.orm import Session
 
 from gigapoll.data.models import Button
+from gigapoll.data.models import Template
 from gigapoll.enums import Modes
 from gigapoll.exc import StrategyFinishedError
 from gigapoll.services import template_service
@@ -158,7 +159,65 @@ class MultiSelectStrategy(TemplateCreationStrategy):
             raise
 
 
+class EventParticipationStrategy(TemplateCreationStrategy):
+    ROLES = (
+        'Я буду участвовать',
+        'Я не буду участвовать',
+        'Я пока не знаю',
+    )
+
+    async def _get_question_by_step(self, step: int) -> str:
+        if not 2 <= step <= 4:
+            raise StrategyFinishedError('There is not more questions')
+        role = self.ROLES[step - 2]
+        return (
+            f'Кнопка {step - 1} — {role}.\n'
+            f'Введи подпись или отправь «По умолчанию»: {role}.\n'
+            'Первые две кнопки прибавляют/вычитают одного участника; '
+            'при нуле ответ исчезает. «Я пока не знаю» сбрасывает '
+            'счётчик и всех гостей, оставляя только автора.'
+        )
+
+    async def _process_answer_by_step(self, answer: str, step: int) -> None:
+        label = answer.strip()
+        if label.casefold() == 'по умолчанию':
+            label = self.ROLES[step - 2]
+        if not label:
+            raise ValueError('Подпись не должна быть пустой')
+        data = await self.state.get_data()
+        for index in range(2, step):
+            if data[f'event_label_{index}'].casefold() == label.casefold():
+                raise ValueError('Подписи должны различаться')
+        await self.state.update_data({f'event_label_{step}': label})
+
+    async def save_template(self, user_id: int, session: Session) -> None:
+        data = await self.state.get_data()
+        labels = [data[f'event_label_{step}'] for step in range(2, 5)]
+        if len({label.casefold() for label in labels}) != 3:
+            raise ValueError('Подписи должны различаться')
+        try:
+            template = Template(
+                user_id=user_id, name=data['name'],
+                description=data['description'],
+                mode=Modes.EVENT_PARTICIPATION,
+            )
+            session.add(template)
+            session.flush()
+            session.add_all([
+                Button(template_id=template.id, value=labels[0],
+                       is_positive=True),
+                Button(template_id=template.id, value=labels[1],
+                       is_negative=True),
+                Button(template_id=template.id, value=labels[2]),
+            ])
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+
+
 STRATEGY_REGISTRY: dict[Modes, type[TemplateCreationStrategy]] = {
     Modes.PLUS_MINUS: PlusMinusStrategy,
     Modes.MULTI_SELECT: MultiSelectStrategy,
+    Modes.EVENT_PARTICIPATION: EventParticipationStrategy,
 }
