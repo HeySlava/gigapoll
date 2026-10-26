@@ -11,6 +11,7 @@ from gigapoll.data.models import Template
 from gigapoll.enums import Modes
 from gigapoll.exc import StrategyFinishedError
 from gigapoll.template_creation.strategies import MultiSelectStrategy
+from gigapoll.template_creation.strategies import SingleSelectStrategy
 
 
 def make_state() -> FSMContext:
@@ -111,6 +112,32 @@ def test_blank_lines_are_ignored() -> None:
         assert data['options'] == ['opt1', 'opt2']
 
     asyncio.run(run())
+
+
+def test_single_select_flow_saves_template(session: Session) -> None:
+    async def run() -> None:
+        state = make_state()
+        await state.update_data(mode=Modes.SINGLE_SELECT)
+        strategy = SingleSelectStrategy(state)
+
+        await strategy.process_answer('event poll')
+        await strategy.process_answer('who is in?')
+        await strategy.process_answer('Yes\nNo\nMaybe')
+
+        with pytest.raises(StrategyFinishedError):
+            await strategy.get_next_question()
+
+        await strategy.save_template(user_id=1, session=session)
+
+    asyncio.run(run())
+
+    template = session.query(Template).filter_by(name='event poll').one()
+    assert template.mode == Modes.SINGLE_SELECT
+    values = {
+            b.value for b
+            in session.query(Button).filter_by(template_id=template.id)
+        }
+    assert values == {'Yes', 'No', 'Maybe'}
 
 
 def test_failed_validation_does_not_advance_step() -> None:

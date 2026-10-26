@@ -2,6 +2,7 @@ from gigapoll.button import CallbackButton
 from gigapoll.enums import Modes
 from gigapoll.kb import get_different_modes_kb
 from gigapoll.kb import get_poll_kb
+from gigapoll.kb import MODES_SELECTION_TEXT
 
 
 def test_modes_kb_contains_all_modes() -> None:
@@ -14,6 +15,19 @@ def test_modes_kb_contains_all_modes() -> None:
         ]
     assert Modes.PLUS_MINUS in callbacks
     assert Modes.MULTI_SELECT in callbacks
+    assert Modes.SINGLE_SELECT in callbacks
+
+
+def test_modes_selection_text_mentions_all_modes() -> None:
+    kb = get_different_modes_kb()
+    button_texts = [
+            b.text
+            for row in kb.inline_keyboard
+            for b in row
+        ]
+
+    for text in button_texts:
+        assert text in MODES_SELECTION_TEXT
 
 
 def test_poll_kb_button_text_and_cbdata() -> None:
