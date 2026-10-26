@@ -158,7 +158,20 @@ class MultiSelectStrategy(TemplateCreationStrategy):
             raise
 
 
+class SingleSelectStrategy(MultiSelectStrategy):
+
+    async def _get_question_by_step(self, step: int) -> str:
+        if step == 2:
+            return (
+                'Отправь варианты ответов, каждый с новой строки. '
+                f'Минимум {self.MIN_OPTIONS}, максимум {self.MAX_OPTIONS}.\n'
+                'Пользователи смогут выбрать только один вариант'
+            )
+        raise StrategyFinishedError('There is not more questions')
+
+
 STRATEGY_REGISTRY: dict[Modes, type[TemplateCreationStrategy]] = {
     Modes.PLUS_MINUS: PlusMinusStrategy,
     Modes.MULTI_SELECT: MultiSelectStrategy,
+    Modes.SINGLE_SELECT: SingleSelectStrategy,
 }

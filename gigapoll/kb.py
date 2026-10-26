@@ -2,6 +2,7 @@ from typing import Sequence
 
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.markdown import hbold
 
 from gigapoll.button import CallbackButton
 from gigapoll.data.models import Template
@@ -11,10 +12,25 @@ from gigapoll.enums import Prefix
 from gigapoll.utils import short_template_representation
 
 
+MODES_SELECTION_TEXT = (
+    'Выбери режим голосования\n'
+    '\n'
+    f'{hbold("ПЛЮС МИНУС")} — два варианта ответа. Повторное нажатие '
+    'добавляет голос (+1), вторая кнопка отматывает голоса назад\n'
+    '\n'
+    f'{hbold("МУЛЬТИВЫБОР")} — до 10 вариантов, можно выбрать '
+    'несколько\n'
+    '\n'
+    f'{hbold("ОДИН ВАРИАНТ")} — до 10 вариантов, можно выбрать только '
+    'один. Повторное нажатие снимает выбор'
+)
+
+
 def get_different_modes_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text='ПЛЮС МИНУС', callback_data=Modes.PLUS_MINUS)
     kb.button(text='МУЛЬТИВЫБОР', callback_data=Modes.MULTI_SELECT)
+    kb.button(text='ОДИН ВАРИАНТ', callback_data=Modes.SINGLE_SELECT)
     kb.adjust(1)
     return kb.as_markup()
 

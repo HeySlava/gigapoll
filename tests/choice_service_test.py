@@ -140,3 +140,78 @@ def test_toggles_do_not_affect_other_polls(session: Session) -> None:
     toggle(session, poll.id, buttons[0].id, user_id=100)
 
     assert selected(session, other_poll.id, user_id=100) == set()
+
+
+def select_single(
+        session: Session,
+        poll_id: int,
+        button_id: int,
+        user_id: int,
+) -> None:
+    choice_service.save_single_choice(
+            user_id=user_id,
+            first_name=f'user{user_id}',
+            last_name=None,
+            username=None,
+            button_id=button_id,
+            poll_id=poll_id,
+            session=session,
+        )
+
+
+def test_single_select_selects_option(session: Session) -> None:
+    poll, buttons = make_poll(session)
+
+    select_single(session, poll.id, buttons[0].id, user_id=100)
+
+    assert selected(session, poll.id, user_id=100) == {buttons[0].id}
+    assert votes_per_button(session, poll)[buttons[0].id] == 1
+
+
+def test_single_select_moves_vote_to_another_option(
+        session: Session,
+) -> None:
+    poll, buttons = make_poll(session)
+
+    select_single(session, poll.id, buttons[0].id, user_id=100)
+    select_single(session, poll.id, buttons[1].id, user_id=100)
+
+    assert selected(session, poll.id, user_id=100) == {buttons[1].id}
+    assert votes_per_button(session, poll) == {
+            buttons[0].id: 0,
+            buttons[1].id: 1,
+            buttons[2].id: 0,
+        }
+
+
+def test_single_select_reclick_unvotes(session: Session) -> None:
+    poll, buttons = make_poll(session)
+
+    select_single(session, poll.id, buttons[0].id, user_id=100)
+    select_single(session, poll.id, buttons[0].id, user_id=100)
+
+    assert selected(session, poll.id, user_id=100) == set()
+    assert votes_per_button(session, poll)[buttons[0].id] == 0
+
+
+def test_single_select_users_are_independent(session: Session) -> None:
+    poll, buttons = make_poll(session)
+
+    select_single(session, poll.id, buttons[0].id, user_id=100)
+    select_single(session, poll.id, buttons[0].id, user_id=200)
+    select_single(session, poll.id, buttons[1].id, user_id=200)
+
+    assert selected(session, poll.id, user_id=100) == {buttons[0].id}
+    assert selected(session, poll.id, user_id=200) == {buttons[1].id}
+    assert votes_per_button(session, poll)[buttons[0].id] == 1
+
+
+def test_single_select_does_not_affect_other_polls(
+        session: Session,
+) -> None:
+    poll, buttons = make_poll(session)
+    other_poll, _ = make_poll(session)
+
+    select_single(session, poll.id, buttons[0].id, user_id=100)
+
+    assert selected(session, other_poll.id, user_id=100) == set()

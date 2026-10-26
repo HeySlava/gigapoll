@@ -228,6 +228,40 @@ def toggle_choice(
         )
 
 
+def save_single_choice(
+        user_id: int,
+        first_name: str,
+        button_id: int,
+        poll_id: int,
+        last_name: str | None,
+        username: str | None,
+        session: Session,
+) -> None:
+    stmt = select(Choice).where(
+            Choice.poll_id == poll_id,
+            Choice.user_id == user_id,
+        )
+    existing = session.scalars(stmt).all()
+    already_selected = any(c.button_id == button_id for c in existing)
+    if existing:
+        delete_stmt = delete(Choice).where(
+                Choice.id.in_([c.id for c in existing])
+            )
+        session.execute(delete_stmt)
+        session.commit()
+    if already_selected:
+        return
+    add_choice(
+            user_id=user_id,
+            first_name=first_name,
+            button_id=button_id,
+            poll_id=poll_id,
+            last_name=last_name,
+            username=username,
+            session=session,
+        )
+
+
 def get_user_button_choices(
         poll_id: int,
         user_id: int,

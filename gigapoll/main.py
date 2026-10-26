@@ -90,7 +90,7 @@ async def new_template(message: Message, state: FSMContext) -> None:
     await state.clear()
     await state.set_state(CreateTemplate.selecting_mode)
     await message.answer(
-        'Выбери режим голосования',
+        kb.MODES_SELECTION_TEXT,
         reply_markup=kb.get_different_modes_kb()
     )
 
@@ -349,7 +349,7 @@ async def back_creation_step(cb: CallbackQuery, state: FSMContext) -> None:
     else:
         await state.set_state(CreateTemplate.selecting_mode)
         await cb.message.edit_text(
-            'Выбери режим голосования',
+            kb.MODES_SELECTION_TEXT,
             reply_markup=kb.get_different_modes_kb(),
         )
 
@@ -418,6 +418,16 @@ def save_choice_via_mode(
                 button_id=button_id,
                 session=session,
             )
+    elif template.mode == Modes.SINGLE_SELECT:
+        choice_service.save_single_choice(
+                user_id=cb.from_user.id,
+                first_name=cb.from_user.first_name,
+                last_name=cb.from_user.last_name,
+                username=cb.from_user.username,
+                poll_id=poll_id,
+                button_id=button_id,
+                session=session,
+            )
     elif template.mode == Modes.MULTI_SELECT:
         choice_service.toggle_choice(
                 user_id=cb.from_user.id,
@@ -449,7 +459,7 @@ async def handle_user_choice(
             poll_id=poll_id,
             session=session,
         )
-    if template.mode == Modes.MULTI_SELECT:
+    if template.mode in (Modes.MULTI_SELECT, Modes.SINGLE_SELECT):
         all_choices = choice_service.get_all_poll_choices(
                 poll_id=poll_id,
                 session=session,
