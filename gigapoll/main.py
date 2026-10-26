@@ -1,7 +1,6 @@
 import asyncio
 import contextlib
 import logging
-from typing import NamedTuple
 from typing import Tuple
 
 from aiogram import Dispatcher
@@ -13,6 +12,7 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineQuery
 from aiogram.types import Message
 from aiogram.types.callback_query import CallbackQuery
+from aiogram.types.chosen_inline_result import ChosenInlineResult
 from aiogram.types.error_event import ErrorEvent
 from aiogram.types.inline_query_result_article import InlineQueryResultArticle
 from aiogram.types.input_text_message_content import InputTextMessageContent
@@ -22,6 +22,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from gigapoll import kb
+from gigapoll import publication_updater
 from gigapoll.bot import bot
 from gigapoll.button import CallbackButton
 from gigapoll.data import db_session
@@ -37,11 +38,14 @@ from gigapoll.filters import CallbackTemplateManager
 from gigapoll.services import buttons_service
 from gigapoll.services import choice_service
 from gigapoll.services import poll_service
+from gigapoll.services import publication_service
 from gigapoll.services import template_service
 from gigapoll.states import CreateTemplate
 from gigapoll.template_creation.strategies import STRATEGY_REGISTRY
 from gigapoll.template_creation.strategies import TemplateCreationStrategy
+from gigapoll.utils import CallbackReply
 from gigapoll.utils import generate_poll_text
+from gigapoll.utils import parse_poll_id_from_result_id
 from gigapoll.utils import set_my_commands
 from gigapoll.utils import short_template_representation
 
@@ -51,11 +55,6 @@ logger = logging.getLogger(__name__)
 
 
 MSG_CHANGE_LIMIT_NUMBER = 15
-
-
-class CallbackReply(NamedTuple):
-    text: str
-    markup: InlineKeyboardMarkup
 
 
 @dp.error()
@@ -140,6 +139,7 @@ async def handle_template_manager_cb(
         CallbackFloodControl(MSG_CHANGE_LIMIT_NUMBER),
     )
 async def user_choice_processing(cb: CallbackQuery) -> None:
+    assert cb.data
     session = next(db_session.create_session())
 
     reply = await handle_user_choice(cb=cb, session=session)
@@ -150,6 +150,14 @@ async def user_choice_processing(cb: CallbackQuery) -> None:
                 reply_markup=reply.markup,
                 disable_web_page_preview=True,
             )
+    if cb.inline_message_id:
+        _, poll_id = CallbackButton.parse_cbdata(cb.data)
+        publication_service.register_publication(
+                poll_id=poll_id,
+                inline_message_id=cb.inline_message_id,
+                session=session,
+            )
+        publication_updater.enqueue_poll_update(poll_id)
     await cb.answer()
 
 
@@ -440,19 +448,11 @@ def save_choice_via_mode(
             )
 
 
-async def handle_user_choice(
-        cb: CallbackQuery,
-        session: Session,
-) -> CallbackReply:
-    assert cb.data
-
-    _, poll_id = CallbackButton.parse_cbdata(cb.data)
+def render_poll(poll_id: int, session: Session) -> CallbackReply:
     template = template_service.get_template_by_poll_id(
             poll_id=poll_id,
             session=session,
         )
-
-    save_choice_via_mode(cb, template, session)
 
     cnt_per_option = choice_service.get_poll_choices_per_option(
             template_id=template.id,
@@ -473,14 +473,75 @@ async def handle_user_choice(
     for b in cnt_per_option:
         b.extend_button(poll_id)
 
-    markup = kb.get_poll_kb(cnt_per_option)
+    poll = poll_service.get_poll_by_id(poll_id, session)
+    markup = kb.get_poll_kb(cnt_per_option, poll.share_token)
     text = generate_poll_text(template.description, choices=all_choices)
     return CallbackReply(text, markup)
+
+
+async def handle_user_choice(
+        cb: CallbackQuery,
+        session: Session,
+) -> CallbackReply:
+    assert cb.data
+
+    _, poll_id = CallbackButton.parse_cbdata(cb.data)
+    template = template_service.get_template_by_poll_id(
+            poll_id=poll_id,
+            session=session,
+        )
+
+    save_choice_via_mode(cb, template, session)
+
+    return render_poll(poll_id, session)
+
+
+def build_share_results(
+        query: str,
+        session: Session,
+) -> list[InlineQueryResultArticle]:
+    share_token = query.removeprefix(kb.SHARE_QUERY_PREFIX)
+    try:
+        poll = poll_service.get_poll_by_share_token(
+                share_token=share_token,
+                session=session,
+            )
+    except NoResultFound:
+        return []
+    try:
+        template = template_service.get_template_by_poll_id(
+                poll_id=poll.id,
+                session=session,
+            )
+    except NoResultFound:
+        return []
+
+    reply = render_poll(poll.id, session)
+    return [
+            InlineQueryResultArticle(
+                id=f'share:{poll.id}',
+                title=template.name,
+                description=template.description,
+                input_message_content=InputTextMessageContent(
+                    message_text=reply.text,
+                    disable_web_page_preview=True,
+                ),
+                reply_markup=reply.markup,
+            ),
+        ]
 
 
 @dp.inline_query()
 async def start_poll_from_inline(inline_query: InlineQuery) -> None:
     session = next(db_session.create_session())
+
+    if inline_query.query.startswith(kb.SHARE_QUERY_PREFIX):
+        await inline_query.answer(
+                build_share_results(inline_query.query, session),
+                is_personal=True,
+                cache_time=1,
+            )
+        return
 
     try:
         templates = template_service.get_available_templates_by_name_like(
@@ -509,20 +570,38 @@ async def start_poll_from_inline(inline_query: InlineQuery) -> None:
 
         result.append(
                 InlineQueryResultArticle(
-                    id=str(t.id),
+                    id=f'{t.id}:{poll.id}',
                     title=t.name,
                     description=t.description,
                     input_message_content=InputTextMessageContent(
                         message_text=t.description,
                         disable_web_page_preview=True,
                     ),
-                    reply_markup=kb.get_poll_kb(poll_buttons),
+                    reply_markup=kb.get_poll_kb(
+                        poll_buttons,
+                        poll.share_token,
+                    ),
                 )
             )
     await inline_query.answer(
             result,
             is_personal=True,
             cache_time=1,
+        )
+
+
+@dp.chosen_inline_result()
+async def track_publication(chosen: ChosenInlineResult) -> None:
+    if not chosen.inline_message_id:
+        return
+    poll_id = parse_poll_id_from_result_id(chosen.result_id)
+    if poll_id is None:
+        return
+    session = next(db_session.create_session())
+    publication_service.register_publication(
+            poll_id=poll_id,
+            inline_message_id=chosen.inline_message_id,
+            session=session,
         )
 
 
@@ -540,6 +619,12 @@ async def old_poll_response(cb: CallbackQuery) -> None:
 
 async def _main() -> None:
     await set_my_commands(bot)
+    asyncio.create_task(
+            publication_updater.run_worker(
+                    bot=bot,
+                    render=render_poll,
+                )
+        )
     await dp.start_polling(bot)
 
 
