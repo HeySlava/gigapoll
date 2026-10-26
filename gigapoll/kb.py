@@ -1,6 +1,7 @@
 from typing import Sequence
 
 from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import SwitchInlineQueryChosenChat
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.markdown import hbold
 
@@ -25,6 +26,8 @@ MODES_SELECTION_TEXT = (
     'один. Повторное нажатие снимает выбор'
 )
 
+SHARE_QUERY_PREFIX = 'share '
+
 
 def get_different_modes_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
@@ -37,12 +40,23 @@ def get_different_modes_kb() -> InlineKeyboardMarkup:
 
 def get_poll_kb(
         poll_buttons: list[CallbackButton],
+        share_token: str | None,
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for b in sorted(poll_buttons, key=lambda x: x.button_id):
         kb.button(
                 text=b.button_name,
                 callback_data=b.get_cbdata(),
+            )
+    if share_token:
+        kb.button(
+                text='\U0001F4E4 Share',
+                switch_inline_query_chosen_chat=SwitchInlineQueryChosenChat(
+                    query=f'{SHARE_QUERY_PREFIX}{share_token}',
+                    allow_user_chats=True,
+                    allow_group_chats=True,
+                    allow_channel_chats=True,
+                ),
             )
     kb.adjust(1)
     return kb.as_markup()

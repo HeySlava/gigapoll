@@ -1,11 +1,15 @@
+import os
 from collections.abc import Generator
 from pathlib import Path
 
-import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+os.environ.setdefault('GIGAPOLL_CONN_STR', 'sqlite:///:memory:')
+os.environ.setdefault('POLL_TOKEN', 'test-token')
 
-from gigapoll.data.models import Base
+import pytest  # noqa: E402
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
+
+from gigapoll.data.models import Base  # noqa: E402
 
 
 @pytest.fixture

@@ -1,3 +1,5 @@
+import secrets
+
 from sqlalchemy.orm import Session
 
 from gigapoll.data.models import Poll
@@ -9,10 +11,27 @@ def resigter_poll(
 ) -> Poll:
     poll = Poll(
             template_id=template_id,
+            share_token=secrets.token_urlsafe(16),
         )
     session.add(poll)
     session.commit()
     return poll
+
+
+def get_poll_by_id(
+        poll_id: int,
+        session: Session,
+) -> Poll:
+    return session.query(Poll).where(Poll.id == poll_id).one()
+
+
+def get_poll_by_share_token(
+        share_token: str,
+        session: Session,
+) -> Poll:
+    return session.query(Poll).where(
+            Poll.share_token == share_token,
+        ).one()
 
 
 def get_poll(
